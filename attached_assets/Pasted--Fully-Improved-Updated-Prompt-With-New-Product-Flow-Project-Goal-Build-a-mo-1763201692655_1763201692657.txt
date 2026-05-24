@@ -1,0 +1,203 @@
+
+
+# ✅ **Fully Improved & Updated Prompt (With New Product Flow)**
+
+**Project Goal:**
+Build a modern, responsive medicine website using **React.js**, **Tailwind CSS**, and **shadcn/ui**, with **JSON-Server (db.json)** as the only backend. The website will have a public-facing section and a protected Super Admin panel to manage all data.
+
+---
+
+# 🌐 **Public Website Pages**
+
+## **1. Home Page**
+
+* Modern hero section with animations
+* Short description about the company/website
+* Display **medicine companies** in tables
+* Google Reviews section
+* Footer with quick links
+
+## **2. About Page**
+
+* Information about the business/project
+
+## **3. Our Products (Replaces “Companies” Tab)**
+
+This page shows **companies** but organized under a new tab-based system.
+
+### **Product Tabs (Filters)**
+
+* Tabs:
+
+  * **All**
+  * **Injectable**
+  * **Surgical Range**
+  * **Medical Range**
+  * **Default**
+* Admin can **add, edit, delete** these main categories
+
+### **Sub-Tabs**
+
+* Each main tab can have **its own sub-tabs**
+* Example: For “Injectable”, sub-tabs can be: A, B, C
+* Clicking a sub-tab filters companies further
+* Sub-tabs also fully manageable by admin
+
+### **Company Display**
+
+* All companies shown in **table format**, not cards
+* Category → Sub-category → Companies
+* Clicking a company opens its medicines list
+* Clicking a medicine opens **full medicine details page**
+
+## **4. Contact Page**
+
+* Contact form (name, email, message)
+* Embedded Google Map for location
+
+---
+
+# 🔐 **Admin Panel**
+
+**Route:** `/admin` (Login required)
+
+The Super Admin can manage everything:
+
+---
+
+# 🏢 **Admin — Manage Companies (Our Products Section)**
+
+## **Company Creation Modal**
+
+Fields:
+
+* Upload Photo
+* Company Name
+* Description
+* **Category Dropdown**
+
+  * Shows all main tabs
+  * Admin can add new categories
+* **Sub-tab Dropdown**
+
+  * Visible only after selecting a Category
+  * Shows existing sub-tabs of that category
+  * Admin can add/delete sub-tabs
+* Show a **count indicator** for each tab/sub-tab
+
+  * Helps admin see how many companies belong in each category/sub-category
+
+### **Company List**
+
+* Displayed in a **table**
+* Each row has:
+
+  * Edit company
+  * Disable company
+  * Manage medicines
+
+### **Manage Company Medicines**
+
+Clicking “Manage” opens a modal:
+
+* Shows all medicines under that company
+* Can:
+
+  * Add new medicine
+  * Edit medicine
+  * Delete medicine
+  * Disable medicine
+
+---
+
+# 💊 **Medicine Creation Modal**
+
+Fields:
+
+* Upload Photo
+* Medicine Name
+* Subname (optional)
+* Description (optional)
+* MGO (optional)
+* Quantity (optional)
+* Side Effects (optional)
+* Usage (optional)
+* **Company Dropdown** (select which company it belongs to)
+
+*No price field required.*
+
+---
+
+# 🗂 **Database Structure (db.json)**
+
+Example:
+
+```json
+{
+  "admins": [
+    { "id": 1, "username": "admin", "password": "admin123" }
+  ],
+  "categories": [
+    { "id": 1, "name": "Injectable" }
+  ],
+  "subcategories": [
+    { "id": 1, "categoryId": 1, "name": "A" }
+  ],
+  "companies": [
+    {
+      "id": 1,
+      "photo": "",
+      "name": "Company A",
+      "description": "",
+      "categoryId": 1,
+      "subcategoryId": 1,
+      "status": "active"
+    }
+  ],
+  "medicines": [
+    {
+      "id": 1,
+      "companyId": 1,
+      "photo": "",
+      "name": "Medicine X",
+      "subname": "",
+      "description": "",
+      "mgo": "",
+      "qty": "",
+      "sideeffects": "",
+      "usage": "",
+      "status": "active"
+    }
+  ],
+  "messages": []
+}
+```
+
+---
+
+# 🎨 **UI & Technical Requirements**
+
+* Use **shadcn/ui** for modals, forms, tables, inputs, alerts
+* Use **Tailwind CSS** for custom layouts
+* Smooth **Framer Motion animations**
+* Fully responsive
+* Modern, clean color palette
+* Centralized API handler file (e.g., `api.js`)
+* React Router v6+
+* Reusable components for:
+
+  * Tables
+  * Forms
+  * Tabs
+  * Modals
+
+---
+
+# 🎯 **Final Expected Output**
+
+A beautiful, modern, responsive website that includes:
+
+* Public pages (Home, About, Our Products with advanced filtering, Contact)
+* Fully functional admin panel for managing categories, subcategories, companies, medicines
+* All data stored and served from **JSON-Server only**
+* Smooth animations, great UI, and clean structure
