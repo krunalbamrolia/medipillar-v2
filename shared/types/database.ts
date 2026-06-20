@@ -6,6 +6,7 @@ export interface Profile {
   phone: string;
   email: string | null;
   isActive: boolean;
+  accountSetupComplete: boolean;
   createdAt: string;
 }
 

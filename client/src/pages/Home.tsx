@@ -54,7 +54,7 @@ export default function Home() {
       description: "Browse through our extensive catalog of pharmaceutical products tailored to your needs.",
     },
     {
-      number: "02", 
+      number: "02",
       title: "Active Learning Engagement",
       description: "Learn about product specifications, usage guidelines, and expert recommendations.",
     },
@@ -108,7 +108,7 @@ export default function Home() {
           <Sparkles className="absolute top-28 left-16 h-6 w-6 text-yellow-400/50 animate-pulse" />
           <Sparkles className="absolute bottom-32 right-24 h-5 w-5 text-yellow-400/40 animate-pulse" style={{ animationDelay: '1s' }} />
         </div>
-        
+
         <div className="container mx-auto max-w-7xl px-6 py-16 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-white">
@@ -120,38 +120,38 @@ export default function Home() {
                 </div>
                 <span className="text-sm text-white/80">5.0 Star | 1.2M+ Reviews</span>
               </div>
-              
+
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
                 <span className="animate-slide-in-left inline-block">Because Health</span><br />
                 <span className="animate-slide-in-left inline-block" style={{ animationDelay: '0.15s' }}>Is Complicated</span><br />
                 <span className="text-yellow-400 animate-slide-in-left inline-block" style={{ animationDelay: '0.3s' }}>Enough.</span>
               </h1>
-              
+
               <p className="text-lg text-white/80 mb-8 max-w-xl animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-                Find quality pharmaceutical products easily. Build your healthcare network 
+                Find quality pharmaceutical products easily. Build your healthcare network
                 with MediPillar - your trusted partner in medical excellence.
               </p>
-              
+
               <div className="flex flex-wrap gap-4 mb-12 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
                 <Link href="/products">
-                  <Button 
-                    size="lg" 
+                  <Button
+                    size="lg"
                     className="bg-white text-[#0d3d2e] hover:bg-white/90 font-semibold px-8 py-6 text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 btn-shine hover:scale-105"
                   >
                     Explore Products
                   </Button>
                 </Link>
                 <Link href="/contact">
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
+                  <Button
+                    size="lg"
+                    variant="outline"
                     className="border-2 border-white/30 text-white hover:bg-white/10 px-8 py-6 text-lg rounded-xl transition-all duration-300 hover:border-white/50 hover:scale-105"
                   >
                     Contact Us
                   </Button>
                 </Link>
               </div>
-              
+
               <div className="flex flex-wrap gap-10 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
                 {stats.map((stat, index) => (
                   <div key={index} className="text-center group">
@@ -161,13 +161,13 @@ export default function Home() {
                 ))}
               </div>
             </div>
-            
+
             <div className="relative hidden lg:block animate-scale-in" style={{ animationDelay: '0.3s' }}>
               <div className="relative">
                 <div className="absolute -inset-4 bg-gradient-to-r from-yellow-400/20 to-teal-400/20 rounded-3xl blur-3xl animate-pulse" />
                 <div className="relative rounded-3xl overflow-hidden border-4 border-white/10 shadow-2xl hover-lift">
-                  <img 
-                    src={heroImage} 
+                  <img
+                    src={heroImage}
                     alt="Healthcare Professional"
                     className="w-full h-[520px] object-cover transition-transform duration-700 hover:scale-105"
                   />
@@ -201,10 +201,10 @@ export default function Home() {
               Discover why healthcare professionals trust MediPillar for their pharmaceutical needs
             </p>
           </div>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             {reasons.map((reason, index) => (
-              <Card 
+              <Card
                 key={index}
                 className="group relative overflow-hidden border-0 shadow-lg card-hover bg-white"
                 style={{ animationDelay: `${index * 0.15}s` }}
@@ -235,7 +235,7 @@ export default function Home() {
           <div className="absolute top-40 right-1/4 w-2 h-2 bg-yellow-400/40 rotate-45 animate-float" />
           <div className="absolute bottom-1/3 left-1/4 w-1.5 h-1.5 bg-white/20 rotate-45 animate-float" style={{ animationDelay: '0.5s' }} />
         </div>
-        
+
         <div className="container mx-auto max-w-7xl px-6 relative z-10">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="animate-slide-in-left">
@@ -243,7 +243,7 @@ export default function Home() {
                 Follow These 3 Simple Steps to<br />
                 <span className="text-yellow-400">Join Our Network!</span>
               </h2>
-              
+
               <div className="space-y-8 mt-12">
                 {steps.map((step, index) => (
                   <div key={index} className="flex gap-6 group cursor-pointer">
@@ -262,17 +262,17 @@ export default function Home() {
                 ))}
               </div>
             </div>
-            
+
             <div className="relative hidden lg:block animate-slide-in-right">
               <div className="relative rounded-3xl overflow-hidden hover-lift">
-                <img 
+                <img
                   src={heroImage}
                   alt="Healthcare Professional"
                   className="w-full h-[500px] object-cover rounded-3xl transition-transform duration-700 hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0d3d2e]/60 to-transparent" />
               </div>
-              
+
               <div className="absolute top-8 right-8 glass-effect rounded-2xl p-4 animate-float hover-scale">
                 <p className="text-3xl font-bold">{isLoadingStats ? "..." : statsData?.companies ?? 0}</p>
                 <p className="text-sm text-white/70">Companies</p>
@@ -297,7 +297,7 @@ export default function Home() {
               <h2 className="text-4xl font-bold mb-2 text-gray-800">Our Popular Companies For You</h2>
               <p className="text-gray-500">Explore our trusted pharmaceutical partners</p>
             </div>
-            <Link href="/products">
+            <Link href="/products?view=companies">
               <Button size="lg" className="mt-4 md:mt-0 bg-gradient-to-r from-[#0d3d2e] to-[#0a5240] hover:shadow-xl transition-all duration-300 btn-shine hover:scale-105" data-testid="button-view-all-companies">
                 View All Companies
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -321,8 +321,8 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {reviews.map((review, idx) => (
-              <Card 
-                key={review.id} 
+              <Card
+                key={review.id}
                 className="border-0 shadow-lg card-hover bg-white"
                 style={{ animationDelay: `${idx * 0.15}s` }}
               >
@@ -331,9 +331,8 @@ export default function Home() {
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star
                         key={i}
-                        className={`h-5 w-5 transition-all duration-300 ${
-                          i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"
-                        }`}
+                        className={`h-5 w-5 transition-all duration-300 ${i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"
+                          }`}
                       />
                     ))}
                   </div>

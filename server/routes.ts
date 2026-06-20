@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { hashPassword, verifyPassword } from "./auth";
 import {
   insertAdminSchema,
   insertCategorySchema,
@@ -21,6 +22,10 @@ const profileSyncSchema = z.object({
   name: z.string().min(1),
   phone: z.string().min(10),
   email: z.string().email().optional().or(z.literal("")),
+});
+
+const verifyResetSessionSchema = z.object({
+  accessToken: z.string().min(1),
 });
 
 // Create partial schemas for PATCH endpoints
@@ -479,15 +484,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid or expired session" });
       }
 
-      const user = await storage.upsertProfile({
-        id: userId,
-        name,
-        phone,
-        email: email || null,
-      });
+      let user = await storage.getUser(userId);
 
-      req.session.userId = user.id;
-      res.json({ success: true, user });
+      if (!user) {
+        user = await storage.upsertProfile({
+          id: userId,
+          name,
+          phone,
+          email: email || null,
+        });
+      } else if (!user.accountSetupComplete) {
+        user = await storage.upsertProfile({
+          id: userId,
+          name: name || user.name,
+          phone: phone || user.phone,
+          email: email || user.email,
+        });
+      }
+
+      // Check whether account setup is already complete
+      const fullProfile = await storage.getUserByPhoneWithHash(phone);
+      const needsSetup = !fullProfile?.accountSetupComplete;
+
+      if (needsSetup) {
+        req.session.pendingUserId = user.id;
+        req.session.userId = undefined;
+      } else {
+        req.session.userId = user.id;
+        req.session.pendingUserId = undefined;
+      }
+
+      res.json({ success: true, user: { ...user, accountSetupComplete: !needsSetup }, needsSetup });
     } catch (error: unknown) {
       console.error("Failed to sync session:", error);
       if (isMissingTableError(error) || (error instanceof Error && error.message.includes("setup_all_tables"))) {
@@ -495,6 +522,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const message = error instanceof Error ? error.message : "Failed to sync session";
       res.status(500).json({ error: message });
+    }
+  });
+
+  // Verify OTP reset session without modifying user profile data
+  app.post("/api/auth/verify-reset-session", async (req, res) => {
+    try {
+      const parsed = verifyResetSessionSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid session data" });
+      }
+
+      const { accessToken } = parsed.data;
+      const userId = await verifySupabaseAccessToken(accessToken);
+      if (!userId) {
+        return res.status(401).json({ error: "Invalid or expired session" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "Account not found in the database. Please register first." });
+      }
+
+      if (!req.session.resetUserId || req.session.resetUserId !== user.id) {
+        return res.status(400).json({ error: "Session mismatch. Please restart the forgot password flow." });
+      }
+
+      req.session.resetVerified = true;
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to verify reset session:", error);
+      res.status(500).json({ error: "Failed to verify reset session" });
     }
   });
 
@@ -511,6 +569,190 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(user);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ——— New Auth Endpoints ———
+
+  // Check if a phone number already has an account
+  app.post("/api/auth/check-phone", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) return res.status(400).json({ error: "Phone required" });
+      const digits = phone.replace(/\D/g, "");
+      const formatted = phone.startsWith("+") ? phone : digits.length === 10 ? `+91${digits}` : `+${digits}`;
+      const user = await storage.getUserByPhoneWithHash(formatted);
+      if (!user) {
+        return res.json({ exists: false, needsSetup: true });
+      }
+      return res.json({
+        exists: true,
+        needsSetup: !user.accountSetupComplete,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Check if an email already has an account
+  app.post("/api/auth/check-email", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ error: "Email required" });
+      const user = await storage.getUserByEmail(email.toLowerCase().trim());
+      return res.json({ exists: !!user });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Login with phone + password (returning users)
+  app.post("/api/auth/login-phone", async (req, res) => {
+    try {
+      const { phone, password } = req.body;
+      if (!phone || !password) {
+        return res.status(400).json({ error: "Phone and password required" });
+      }
+      const digits = phone.replace(/\D/g, "");
+      const formatted = phone.startsWith("+") ? phone : digits.length === 10 ? `+91${digits}` : `+${digits}`;
+      const user = await storage.getUserByPhoneWithHash(formatted);
+      if (!user) {
+        return res.status(401).json({ error: "No account found for this phone number" });
+      }
+      if (!user.passwordHash) {
+        return res.status(401).json({ error: "Account setup not complete. Please verify via OTP first." });
+      }
+      const valid = await verifyPassword(password, user.passwordHash);
+      if (!valid) {
+        return res.status(401).json({ error: "Incorrect password" });
+      }
+      if (!user.isActive) {
+        return res.status(403).json({ error: "Account deactivated. Contact support." });
+      }
+      req.session.userId = user.id;
+      const { passwordHash: _ph, accountSetupComplete: _asc, ...safeUser } = user;
+      res.json({ success: true, user: safeUser });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Login with email + password
+  app.post("/api/auth/login-email", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password required" });
+      }
+      const user = await storage.getUserByEmailWithHash(email.toLowerCase().trim());
+      if (!user) {
+        return res.status(401).json({ error: "No account found for this email" });
+      }
+      if (!user.passwordHash) {
+        return res.status(401).json({ error: "Account setup not complete. Please verify via OTP first." });
+      }
+      const valid = await verifyPassword(password, user.passwordHash);
+      if (!valid) {
+        return res.status(401).json({ error: "Incorrect password" });
+      }
+      if (!user.isActive) {
+        return res.status(403).json({ error: "Account deactivated. Contact support." });
+      }
+      req.session.userId = user.id;
+      const { passwordHash: _ph, accountSetupComplete: _asc, ...safeUser } = user;
+      res.json({ success: true, user: safeUser });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Complete account setup: save email + password after OTP verification
+  app.post("/api/auth/setup-account", async (req, res) => {
+    try {
+      const userId = req.session.pendingUserId || req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password required" });
+      }
+      if (password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+      // Check email uniqueness
+      const existingEmail = await storage.getUserByEmail(email.toLowerCase().trim());
+      if (existingEmail && existingEmail.id !== userId) {
+        return res.status(409).json({ error: "This email is already registered to another account" });
+      }
+      const passwordHash = await hashPassword(password);
+      await storage.updateUserEmail(userId, email.toLowerCase().trim());
+      await storage.setPassword(userId, passwordHash);
+      await storage.markAccountSetupComplete(userId);
+
+      // Now establish the active login session
+      req.session.userId = userId;
+      req.session.pendingUserId = undefined;
+
+      const user = await storage.getUser(userId);
+      res.json({ success: true, user });
+    } catch (error) {
+      console.error("Account setup error:", error);
+      res.status(500).json({ error: "Failed to complete account setup" });
+    }
+  });
+
+  // Forgot password — sends OTP to registered phone
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { phone, email } = req.body;
+      if (!phone && !email) {
+        return res.status(400).json({ error: "Phone or email required" });
+      }
+      let user;
+      let normalizedPhone: string | undefined;
+      if (phone) {
+        const digits = (phone as string).replace(/\D/g, "");
+        const np = phone.startsWith("+") ? phone : digits.length === 10 ? `+91${digits}` : `+${digits}`;
+        normalizedPhone = np;
+        user = await storage.getUserByPhone(np);
+      } else {
+        user = await storage.getUserByEmail(email.toLowerCase().trim());
+        // Look up their phone for OTP
+        if (user) normalizedPhone = user.phone;
+      }
+      if (!user || !normalizedPhone) {
+        // Don't reveal whether account exists
+        return res.json({ success: true, message: "If an account exists, an OTP has been sent." });
+      }
+      // Store the userId in session for reset verification
+      req.session.resetUserId = user.id;
+      // Return the phone (formatted) to client so it can trigger Supabase OTP
+      res.json({ success: true, phone: normalizedPhone });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Reset password after OTP verification
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { password } = req.body;
+      const userId = req.session.resetUserId as string | undefined;
+      const verified = req.session.resetVerified as boolean | undefined;
+      if (!userId || !verified) {
+        return res.status(400).json({ error: "No reset session found or OTP not verified. Please start the forgot password flow again." });
+      }
+      if (!password || password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+      const passwordHash = await hashPassword(password);
+      await storage.setPassword(userId, passwordHash);
+      req.session.resetUserId = undefined;
+      req.session.resetVerified = undefined;
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to reset password" });
     }
   });
 
@@ -622,9 +864,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { status } = req.body;
       const order = await storage.updateOrderStatus(req.params.id, status);
+      if (!order) return res.status(404).json({ error: "Order not found" });
       res.json(order);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to update order status" });
+    } catch (error: any) {
+      const msg: string = error?.message ?? "Failed to update order status";
+      if (msg.includes("Cannot change a shipped order")) {
+        return res.status(400).json({ error: msg });
+      }
+      if (msg === "Order not found") {
+        return res.status(404).json({ error: msg });
+      }
+      res.status(500).json({ error: msg });
     }
   });
 

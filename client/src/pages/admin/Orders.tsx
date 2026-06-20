@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, Mail, Phone, MapPin, User } from "lucide-react";
+import { Eye, Mail, Phone, MapPin, User, Lock, MessageCircle } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { AdminOrder, OrderItemDetail, PaginatedResult } from "@shared/types/database";
 import { OrderItemsTable } from "@/components/admin/OrderItemsTable";
@@ -18,6 +18,7 @@ import { AdminSearchBar } from "@/components/admin/AdminSearchBar";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { createShippedNotificationLink } from "@/lib/whatsapp";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-100 text-amber-800 border-amber-200",
@@ -26,6 +27,9 @@ const STATUS_STYLES: Record<string, string> = {
   delivered: "bg-green-100 text-green-800 border-green-200",
   cancelled: "bg-red-100 text-red-800 border-red-200",
 };
+
+/** Statuses that are disallowed when order is already Shipped */
+const SHIPPED_LOCKED: string[] = ["pending", "confirmed"];
 
 export default function AdminOrders() {
   const [page, setPage] = useState(1);
@@ -70,11 +74,44 @@ export default function AdminOrders() {
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const res = await apiRequest("PATCH", `/api/admin/orders/${id}/status`, { status });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: "Failed to update order status" }));
+        throw new Error(body.error ?? "Failed to update order status");
+      }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedOrder, { status }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
       toast({ title: "Order status updated" });
+
+      // Auto-open WhatsApp when status becomes Shipped
+      if (status === "shipped" && updatedOrder?.user?.phone) {
+        const items: Array<{ medicineName: string; quantity: number }> =
+          (orderDetails?.items ?? []).map((i: OrderItemDetail) => ({
+            medicineName: i.medicineName,
+            quantity: i.quantity,
+          }));
+
+        // If dialog was open and we have items, use those; otherwise use a generic message
+        const waLink = createShippedNotificationLink({
+          customerPhone: updatedOrder.user.phone,
+          customerName: updatedOrder.user.name ?? "Customer",
+          orderId: updatedOrder.id,
+          items: items.length > 0 ? items : [{ medicineName: "Your order items", quantity: 1 }],
+        });
+        window.open(waLink, "_blank", "noopener,noreferrer");
+        toast({
+          title: "📱 WhatsApp opened",
+          description: "A pre-filled message is ready to send to the customer.",
+        });
+      }
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "Failed to update status",
+        description: err.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -161,61 +198,104 @@ export default function AdminOrders() {
                 </TableCell>
               </TableRow>
             ) : (
-              orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-mono text-xs sm:text-sm">
-                    {order.id.slice(0, 8).toUpperCase()}
-                  </TableCell>
-                  <TableCell>
-                    <p className="font-medium">{order.user?.name ?? "—"}</p>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <p className="text-sm">{order.user?.phone ?? "—"}</p>
-                    <p className="text-xs text-muted-foreground">{order.user?.email ?? "—"}</p>
-                  </TableCell>
-                  <TableCell className="hidden max-w-[200px] lg:table-cell">
-                    <p className="line-clamp-2 text-sm text-muted-foreground">
-                      {order.address || "—"}
-                    </p>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-sm">
-                    {format(new Date(order.createdAt), "MMM dd, yyyy")}
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={order.status}
-                      onValueChange={(val) => updateStatus.mutate({ id: order.id, status: val })}
-                      disabled={updateStatus.isPending}
-                    >
-                      <SelectTrigger
-                        className={`h-8 w-[120px] border font-medium capitalize ${STATUS_STYLES[order.status] ?? ""}`}
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="shipped">Shipped</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setDialogOpen(true);
-                      }}
-                    >
-                      <Eye className="mr-1 h-4 w-4" />
-                      View
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              orders.map((order) => {
+                const isShipped = order.status === "shipped";
+                return (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-mono text-xs sm:text-sm">
+                      {order.id.slice(0, 8).toUpperCase()}
+                    </TableCell>
+                    <TableCell>
+                      <p className="font-medium">{order.user?.name ?? "—"}</p>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <p className="text-sm">{order.user?.phone ?? "—"}</p>
+                      <p className="text-xs text-muted-foreground">{order.user?.email ?? "—"}</p>
+                    </TableCell>
+                    <TableCell className="hidden max-w-[200px] lg:table-cell">
+                      <p className="line-clamp-2 text-sm text-muted-foreground">
+                        {order.address || "—"}
+                      </p>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm">
+                      {format(new Date(order.createdAt), "MMM dd, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        {isShipped && (
+                          <span title="Shipped orders cannot be moved back to Pending or Confirmed">
+                            <Lock className="h-3.5 w-3.5 shrink-0 text-purple-600" />
+                          </span>
+                        )}
+                        <Select
+                          value={order.status}
+                          onValueChange={(val) => updateStatus.mutate({ id: order.id, status: val })}
+                          disabled={updateStatus.isPending}
+                        >
+                          <SelectTrigger
+                            className={`h-8 w-[120px] border font-medium capitalize ${STATUS_STYLES[order.status] ?? ""}`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem
+                              value="pending"
+                              disabled={isShipped}
+                              className={isShipped ? "opacity-40 cursor-not-allowed" : ""}
+                            >
+                              Pending
+                            </SelectItem>
+                            <SelectItem
+                              value="confirmed"
+                              disabled={isShipped}
+                              className={isShipped ? "opacity-40 cursor-not-allowed" : ""}
+                            >
+                              Confirmed
+                            </SelectItem>
+                            <SelectItem value="shipped">Shipped</SelectItem>
+                            <SelectItem value="delivered">Delivered</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {/* Quick WhatsApp button for already-shipped orders */}
+                        {isShipped && order.user?.phone && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-green-200 text-green-700 hover:bg-green-50"
+                            onClick={() => {
+                              const waLink = createShippedNotificationLink({
+                                customerPhone: order.user!.phone!,
+                                customerName: order.user!.name ?? "Customer",
+                                orderId: order.id,
+                                items: [{ medicineName: "Your order items", quantity: 1 }],
+                              });
+                              window.open(waLink, "_blank", "noopener,noreferrer");
+                            }}
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          <Eye className="mr-1 h-4 w-4" />
+                          View
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -260,9 +340,16 @@ export default function AdminOrders() {
               <div>
                 <div className="mb-3 flex items-center justify-between">
                   <h3 className="text-sm font-semibold">Order Items</h3>
-                  <Badge variant="outline" className={`capitalize ${STATUS_STYLES[selectedOrder.status] ?? ""}`}>
-                    {selectedOrder.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {selectedOrder.status === "shipped" && (
+                      <span className="flex items-center gap-1 text-xs text-purple-600 font-medium">
+                        <Lock className="h-3 w-3" /> Status Locked
+                      </span>
+                    )}
+                    <Badge variant="outline" className={`capitalize ${STATUS_STYLES[selectedOrder.status] ?? ""}`}>
+                      {selectedOrder.status}
+                    </Badge>
+                  </div>
                 </div>
                 {detailsLoading ? (
                   <p className="py-8 text-center text-sm text-muted-foreground">Loading items...</p>
@@ -273,6 +360,35 @@ export default function AdminOrders() {
                   />
                 )}
               </div>
+
+              {/* WhatsApp notify button inside dialog for shipped orders */}
+              {selectedOrder.status === "shipped" && selectedOrder.user?.phone && (
+                <div className="rounded-lg border border-green-200 bg-green-50 p-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-green-800">Send Shipment Notification</p>
+                    <p className="text-xs text-green-700">Open WhatsApp with a pre-filled message for this customer.</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white shrink-0"
+                    onClick={() => {
+                      const waLink = createShippedNotificationLink({
+                        customerPhone: selectedOrder.user!.phone!,
+                        customerName: selectedOrder.user!.name ?? "Customer",
+                        orderId: selectedOrder.id,
+                        items: (orderDetails?.items ?? []).map((i: OrderItemDetail) => ({
+                          medicineName: i.medicineName,
+                          quantity: i.quantity,
+                        })),
+                      });
+                      window.open(waLink, "_blank", "noopener,noreferrer");
+                    }}
+                  >
+                    <MessageCircle className="mr-1.5 h-4 w-4" />
+                    WhatsApp
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

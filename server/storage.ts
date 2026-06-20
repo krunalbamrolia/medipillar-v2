@@ -48,6 +48,7 @@ function rowToProfile(row: Record<string, unknown>): Profile {
     phone: row.phone as string,
     email: (row.email as string) ?? null,
     isActive: row.is_active !== false,
+    accountSetupComplete: row.account_setup_complete === true,
     createdAt: row.created_at as string,
   };
 }
@@ -229,7 +230,7 @@ class SupabaseStorage {
   async getUser(id: string): Promise<Profile | undefined> {
     const { data, error } = await this.db()
       .from("profiles")
-      .select("id, name, phone, email, is_active, created_at")
+      .select("id, name, phone, email, is_active, account_setup_complete, created_at")
       .eq("id", id)
       .maybeSingle();
     this.handleError(error);
@@ -239,11 +240,91 @@ class SupabaseStorage {
   async getUserByPhone(phone: string): Promise<Profile | undefined> {
     const { data, error } = await this.db()
       .from("profiles")
-      .select("id, name, phone, email, is_active, created_at")
+      .select("id, name, phone, email, is_active, account_setup_complete, created_at")
       .eq("phone", phone)
       .maybeSingle();
     this.handleError(error);
     return data ? rowToProfile(data) : undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<Profile | undefined> {
+    const { data, error } = await this.db()
+      .from("profiles")
+      .select("id, name, phone, email, is_active, account_setup_complete, created_at")
+      .eq("email", email)
+      .maybeSingle();
+    this.handleError(error);
+    return data ? rowToProfile(data) : undefined;
+  }
+
+  async getUserByPhoneWithHash(phone: string): Promise<
+    | (Profile & {
+        passwordHash: string | null;
+        accountSetupComplete: boolean;
+      })
+    | undefined
+  > {
+    const { data, error } = await this.db()
+      .from("profiles")
+      .select(
+        "id, name, phone, email, is_active, created_at, password_hash, account_setup_complete",
+      )
+      .eq("phone", phone)
+      .maybeSingle();
+    this.handleError(error);
+    if (!data) return undefined;
+    return {
+      ...rowToProfile(data),
+      passwordHash: (data.password_hash as string) ?? null,
+      accountSetupComplete: data.account_setup_complete === true,
+    };
+  }
+
+  async getUserByEmailWithHash(email: string): Promise<
+    | (Profile & {
+        passwordHash: string | null;
+        accountSetupComplete: boolean;
+      })
+    | undefined
+  > {
+    const { data, error } = await this.db()
+      .from("profiles")
+      .select(
+        "id, name, phone, email, is_active, created_at, password_hash, account_setup_complete",
+      )
+      .eq("email", email)
+      .maybeSingle();
+    this.handleError(error);
+    if (!data) return undefined;
+    return {
+      ...rowToProfile(data),
+      passwordHash: (data.password_hash as string) ?? null,
+      accountSetupComplete: data.account_setup_complete === true,
+    };
+  }
+
+  async setPassword(userId: string, passwordHash: string): Promise<void> {
+    const { error } = await this.db()
+      .from("profiles")
+      .update({ password_hash: passwordHash })
+      .eq("id", userId);
+    this.handleError(error);
+  }
+
+  async markAccountSetupComplete(userId: string): Promise<void> {
+    const { error } = await this.db()
+      .from("profiles")
+      .update({ account_setup_complete: true })
+      .eq("id", userId);
+    this.handleError(error);
+  }
+
+  async updateUserEmail(userId: string, email: string): Promise<void> {
+    const { error } = await this.db()
+      .from("profiles")
+      .update({ email })
+      .eq("id", userId);
+    this.handleError(error);
   }
 
   async getUsersPaginated(
@@ -254,7 +335,7 @@ class SupabaseStorage {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    let q = this.db().from("profiles").select("id, name, phone, email, is_active, created_at", { count: "exact" });
+    let q = this.db().from("profiles").select("id, name, phone, email, is_active, account_setup_complete, created_at", { count: "exact" });
     if (params.search) {
       q = q.or(
         `name.ilike.%${params.search}%,phone.ilike.%${params.search}%,email.ilike.%${params.search}%`,
@@ -1139,6 +1220,26 @@ class SupabaseStorage {
   }
 
   async updateOrderStatus(id: string, status: string) {
+    // Fetch current order to enforce status-lock rules
+    const { data: current, error: fetchError } = await this.db()
+      .from("orders")
+      .select("id, user_id, status, address, created_at")
+      .eq("id", id)
+      .maybeSingle();
+    this.handleError(fetchError);
+
+    if (!current) throw new Error("Order not found");
+
+    const LOCKED_DOWNGRADES = ["pending", "confirmed"];
+    if (
+      current.status === "shipped" &&
+      LOCKED_DOWNGRADES.includes(status)
+    ) {
+      throw new Error(
+        "Cannot change a shipped order back to pending or confirmed.",
+      );
+    }
+
     const { data, error } = await this.db()
       .from("orders")
       .update({ status })
@@ -1146,7 +1247,23 @@ class SupabaseStorage {
       .select()
       .maybeSingle();
     this.handleError(error);
-    return data ? rowToOrder(data) : undefined;
+
+    if (!data) return undefined;
+
+    const order = rowToOrder(data);
+
+    // Fetch user profile so caller can build WhatsApp notification link
+    const { data: profileRow, error: profileError } = await this.db()
+      .from("profiles")
+      .select("id, name, phone, email, is_active, account_setup_complete, created_at")
+      .eq("id", order.userId)
+      .maybeSingle();
+    this.handleError(profileError);
+
+    return {
+      ...order,
+      user: profileRow ? rowToProfile(profileRow) : undefined,
+    };
   }
 
   async getDashboardStats() {
