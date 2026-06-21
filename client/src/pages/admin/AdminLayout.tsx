@@ -1,15 +1,46 @@
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { adminGetMeApi } from "@/api/auth";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
+  const [, setLocation] = useLocation();
+
+  const { data: auth, isLoading } = useQuery({
+    queryKey: ["/api/admin/me"],
+    queryFn: adminGetMeApi,
+    retry: false,
+    staleTime: 5000,
+  });
+
+  useEffect(() => {
+    if (!isLoading && (!auth || !auth.authenticated)) {
+      setLocation("/admin");
+    }
+  }, [auth, isLoading, setLocation]);
+
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
+
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0d3d2e]" />
+      </div>
+    );
+  }
+
+  if (!auth || !auth.authenticated) {
+    return null;
+  }
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>

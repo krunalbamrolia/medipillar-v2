@@ -1,4 +1,5 @@
-import { useMutation } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation } from "wouter";
@@ -8,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Pill, Lock } from "lucide-react";
-import { adminLoginApi } from "@/api/auth";
+import { adminLoginApi, adminGetMeApi } from "@/api/auth";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -21,6 +22,18 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  const { data: auth } = useQuery({
+    queryKey: ["/api/admin/me"],
+    queryFn: adminGetMeApi,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (auth?.authenticated) {
+      setLocation("/admin/dashboard");
+    }
+  }, [auth, setLocation]);
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
