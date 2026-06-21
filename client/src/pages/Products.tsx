@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -86,6 +87,7 @@ export default function Products() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCompanyId, setSelectedCompanyId] = useState("all");
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
   const [page, setPage] = useState(1);
   const limit = 10;
 
@@ -143,6 +145,7 @@ export default function Products() {
       selectedCompanyId,
       selectedCategoryId,
       searchQuery,
+      sortBy,
       page,
     ],
     queryFn: () => getMedicinesPaginatedApi({
@@ -150,7 +153,8 @@ export default function Products() {
       limit,
       companyId: selectedCompanyId !== "all" ? selectedCompanyId : undefined,
       categoryId: selectedCategoryId !== "all" ? selectedCategoryId : undefined,
-      search: searchQuery
+      search: searchQuery,
+      sortBy,
     }) as any,
     enabled: currentView === "products",
   });
@@ -158,12 +162,13 @@ export default function Products() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [selectedCompanyId, selectedCategoryId, searchQuery]);
+  }, [selectedCompanyId, selectedCategoryId, searchQuery, sortBy]);
 
   const handleResetFilters = () => {
     setSearchQuery("");
     setSelectedCompanyId("all");
     setSelectedCategoryId("all");
+    setSortBy("newest");
     setPage(1);
   };
 
@@ -420,7 +425,7 @@ export default function Products() {
             <div className="animate-fade-in">
               {/* Filters */}
               <div className="bg-white rounded-2xl shadow-md border p-6 mb-8">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700">Search Product</label>
                     <div className="relative">
@@ -454,6 +459,23 @@ export default function Products() {
                       placeholder="Select Category"
                       searchPlaceholder="Search Category..."
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700">Sort By</label>
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="h-11 border-2 focus:border-[#0d3d2e] rounded-xl font-medium bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="name-asc">Product Name (A → Z)</SelectItem>
+                        <SelectItem value="name-desc">Product Name (Z → A)</SelectItem>
+                        <SelectItem value="price-asc">Price (Low → High)</SelectItem>
+                        <SelectItem value="price-desc">Price (High → Low)</SelectItem>
+                        <SelectItem value="newest">Newest First</SelectItem>
+                        <SelectItem value="oldest">Oldest First</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>

@@ -71,3 +71,30 @@ export function createShippedNotificationLink(data: {
 
   return `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
 }
+
+export function createOrderWhatsAppLink(data: {
+  orderId: string;
+  selectedShippingTime: string;
+  items: Array<{ medicineName: string }>;
+  customerName: string;
+  customerPhone: string;
+}): string {
+  const lines = [
+    "Order Inquiry",
+    "",
+    `Order ID: ${data.orderId}`,
+    "",
+    "Selected Shipping Option:",
+    data.selectedShippingTime,
+    "",
+    "Products:",
+    ...data.items.map((i) => `* ${i.medicineName}`),
+    "",
+    "Customer Details:",
+    `Name: ${data.customerName}`,
+    `Phone: ${data.customerPhone}`,
+    "",
+    "Thank you.",
+  ];
+  return `https://wa.me/${businessPhone}?text=${encodeURIComponent(lines.join("\n"))}`;
+}

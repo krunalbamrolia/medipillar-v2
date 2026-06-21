@@ -261,54 +261,69 @@ export default function AdminOrders() {
       </AdminTableShell>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Order Details</DialogTitle>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-xl">
+          <DialogHeader className="pb-2 border-b">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-primary">
+              Order Details
+            </DialogTitle>
           </DialogHeader>
           {selectedOrder && (
-            <div className="mt-2 space-y-6">
-              <Card className="border-0 bg-muted/50 p-4">
-                <p className="text-xs font-medium uppercase text-muted-foreground">Placed on</p>
-                <p className="mt-1 text-sm font-medium">
-                  {format(new Date(selectedOrder.createdAt), "PPP p")}
-                </p>
-              </Card>
+            <div className="mt-4 space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Card className="border bg-muted/30 p-4 shadow-sm rounded-xl">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Order ID</p>
+                  <p className="font-mono font-bold text-foreground text-sm break-all">
+                    {selectedOrder.id}
+                  </p>
+                </Card>
+                <Card className="border bg-muted/30 p-4 shadow-sm rounded-xl">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Placed On</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">
+                    {format(new Date(selectedOrder.createdAt), "PPP p")}
+                  </p>
+                </Card>
+              </div>
 
               <div>
-                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                  <User className="h-4 w-4" />
+                <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-foreground uppercase tracking-wider">
+                  <User className="h-4 w-4 text-emerald-600" />
                   Customer Information
                 </h3>
-                <Card className="space-y-2 border bg-muted/30 p-4">
-                  <p className="font-medium">{selectedOrder.user?.name ?? "Unknown"}</p>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone className="h-3.5 w-3.5" />
-                    {selectedOrder.user?.phone ?? "—"}
+                <Card className="space-y-3 border bg-muted/10 p-4 shadow-sm rounded-xl">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
+                    <p className="font-bold text-foreground text-base">{selectedOrder.user?.name ?? "Unknown"}</p>
+                    <Badge variant="outline" className={`capitalize font-semibold ${STATUS_STYLES[selectedOrder.status] ?? ""}`}>
+                      {selectedOrder.status}
+                    </Badge>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="h-3.5 w-3.5" />
-                    {selectedOrder.user?.email ?? "—"}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                      <span className="text-foreground font-medium">{selectedOrder.user?.phone ?? "—"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                      <span className="text-foreground font-medium truncate">{selectedOrder.user?.email ?? "—"}</span>
+                    </div>
                   </div>
-                  <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <span>{selectedOrder.address || "No delivery address"}</span>
+                  <div className="flex items-start gap-2 text-sm text-muted-foreground border-t pt-2 mt-1">
+                    <MapPin className="mt-0.5 h-4 w-4 text-emerald-600 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">Delivery Address</span>
+                      <p className="text-foreground font-medium mt-0.5">{selectedOrder.address || "No delivery address"}</p>
+                    </div>
                   </div>
                 </Card>
               </div>
 
               <div>
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">Order Items</h3>
-                  <div className="flex items-center gap-2">
-                    {selectedOrder.status === "shipped" && (
-                      <span className="flex items-center gap-1 text-xs text-purple-600 font-medium">
-                        <Lock className="h-3 w-3" /> Status Locked
-                      </span>
-                    )}
-                    <Badge variant="outline" className={`capitalize ${STATUS_STYLES[selectedOrder.status] ?? ""}`}>
-                      {selectedOrder.status}
-                    </Badge>
-                  </div>
+                <div className="mb-3 flex items-center justify-between border-b pb-1">
+                  <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Order Items</h3>
+                  {selectedOrder.status === "shipped" && (
+                    <span className="flex items-center gap-1 text-xs text-purple-600 font-semibold bg-purple-50 px-2.5 py-1 rounded-full border border-purple-100 shadow-sm">
+                      <Lock className="h-3.5 w-3.5" /> Status Locked
+                    </span>
+                  )}
                 </div>
                 {detailsLoading ? (
                   <p className="py-8 text-center text-sm text-muted-foreground">Loading items...</p>
@@ -319,7 +334,7 @@ export default function AdminOrders() {
                   />
                 )}
               </div>
-
+              
               {/* WhatsApp notify button inside dialog for shipped orders */}
               {selectedOrder.status === "shipped" && selectedOrder.user?.phone && (
                 <div className="rounded-lg border border-green-200 bg-green-50 p-3 flex items-center justify-between gap-3">

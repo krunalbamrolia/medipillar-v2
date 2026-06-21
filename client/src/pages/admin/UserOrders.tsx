@@ -56,14 +56,10 @@ export default function AdminUserOrders() {
 
   const [page, setPage] = useState(1);
   const [medicineSearch, setMedicineSearch] = useState("");
-  const [quantityFilter, setQuantityFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<AdminUserOrderDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const debouncedMedicine = useDebouncedValue(medicineSearch);
   const limit = 10;
-
-  const quantityParam =
-    quantityFilter !== "all" ? parseInt(quantityFilter, 10) : undefined;
 
   const { data, isLoading, isFetching } = useQuery<AdminUserOrdersPage>({
     queryKey: [
@@ -72,22 +68,19 @@ export default function AdminUserOrders() {
       "orders",
       page,
       debouncedMedicine,
-      quantityFilter,
     ],
     queryFn: () => getAdminUserOrdersApi(userId!, {
       page,
       limit,
       medicineName: debouncedMedicine,
-      quantity: quantityParam,
     }),
     enabled: !!userId,
   });
 
-  const hasFilters = !!debouncedMedicine || quantityFilter !== "all";
+  const hasFilters = !!debouncedMedicine;
 
   const clearFilters = () => {
     setMedicineSearch("");
-    setQuantityFilter("all");
     setPage(1);
   };
 
@@ -166,7 +159,7 @@ export default function AdminUserOrders() {
         </Card>
       )}
 
-      <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_200px_auto]">
+      <div className="mb-4 grid gap-4 sm:grid-cols-[1fr_auto] items-end">
         <div>
           <Label className="mb-1.5 block text-xs text-muted-foreground">
             Medicine or company name
@@ -181,28 +174,6 @@ export default function AdminUserOrders() {
           />
         </div>
         <div>
-          <Label className="mb-1.5 block text-xs text-muted-foreground">Quantity</Label>
-          <Select
-            value={quantityFilter}
-            onValueChange={(v) => {
-              setQuantityFilter(v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Any quantity" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Any quantity</SelectItem>
-              {[1, 2, 3, 4, 5, 10, 20, 50].map((q) => (
-                <SelectItem key={q} value={String(q)}>
-                  Contains qty {q}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-end">
           {hasFilters && (
             <Button variant="outline" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
               <X className="mr-1 h-4 w-4" />
@@ -302,27 +273,35 @@ export default function AdminUserOrders() {
       </AdminTableShell>
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Order Details</DialogTitle>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-xl">
+          <DialogHeader className="pb-2 border-b">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-primary">
+              Order Details
+            </DialogTitle>
           </DialogHeader>
           {selectedOrder && (
-            <div className="mt-2 space-y-6">
+            <div className="mt-4 space-y-6">
               {detailLoading && (
-                <p className="text-sm text-muted-foreground">Refreshing items...</p>
+                <p className="text-sm text-muted-foreground animate-pulse">Refreshing items...</p>
               )}
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Card className="border-0 bg-muted/50 p-4">
-                  <p className="text-xs font-medium uppercase text-muted-foreground">Placed on</p>
-                  <p className="mt-1 text-sm font-medium">
-                    {format(new Date(selectedOrder.createdAt), "PPP 'at' p")}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Card className="border bg-muted/30 p-4 rounded-xl shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Order ID</p>
+                  <p className="font-mono font-bold text-foreground text-xs break-all">
+                    {selectedOrder.id}
                   </p>
                 </Card>
-                <Card className="border-0 bg-muted/50 p-4">
-                  <p className="text-xs font-medium uppercase text-muted-foreground">Status</p>
+                <Card className="border bg-muted/30 p-4 rounded-xl shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Placed On</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">
+                    {format(new Date(selectedOrder.createdAt), "PPP p")}
+                  </p>
+                </Card>
+                <Card className="border bg-muted/30 p-4 rounded-xl shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Status</p>
                   <Badge
                     variant="outline"
-                    className={`mt-2 capitalize ${STATUS_STYLES[selectedOrder.status] ?? ""}`}
+                    className={`mt-1 capitalize font-semibold ${STATUS_STYLES[selectedOrder.status] ?? ""}`}
                   >
                     {selectedOrder.status}
                   </Badge>

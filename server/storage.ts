@@ -491,7 +491,6 @@ class SupabaseStorage {
       page?: number;
       limit?: number;
       medicineName?: string;
-      quantity?: number;
     } = {},
   ) {
     const user = await this.getUser(userId);
@@ -509,10 +508,6 @@ class SupabaseStorage {
             i.companyName.toLowerCase().includes(term),
         ),
       );
-    }
-
-    if (params.quantity !== undefined && !Number.isNaN(params.quantity)) {
-      orders = orders.filter((o) => o.items.some((i) => i.quantity === params.quantity));
     }
 
     const page = params.page ?? 1;
@@ -779,6 +774,7 @@ class SupabaseStorage {
     search?: string;
     page?: number;
     limit?: number;
+    sortBy?: string;
   }): Promise<PaginatedResult<LegacyMedicine>> {
     const page = params.page ?? 1;
     const limit = params.limit ?? 10;
@@ -807,7 +803,31 @@ class SupabaseStorage {
       if (categoryIds.length) orParts.push(`category_id.in.(${categoryIds.join(",")})`);
       q = q.or(orParts.join(","));
     }
-    const { data, error, count } = await q.order("created_at", { ascending: false }).range(from, to);
+
+    let orderCol = "created_at";
+    let orderAsc = false;
+
+    if (params.sortBy) {
+      if (params.sortBy === "name-asc") {
+        orderCol = "name";
+        orderAsc = true;
+      } else if (params.sortBy === "name-desc") {
+        orderCol = "name";
+        orderAsc = false;
+      } else if (params.sortBy === "price-asc" || params.sortBy === "price-desc") {
+        // Fallback to name sorting since medicines have no price column
+        orderCol = "name";
+        orderAsc = params.sortBy === "price-asc";
+      } else if (params.sortBy === "oldest") {
+        orderCol = "created_at";
+        orderAsc = true;
+      } else if (params.sortBy === "newest") {
+        orderCol = "created_at";
+        orderAsc = false;
+      }
+    }
+
+    const { data, error, count } = await q.order(orderCol, { ascending: orderAsc }).range(from, to);
     this.handleError(error);
     const total = count ?? 0;
     const medicines = (data ?? []).map(rowToMedicine);
@@ -1169,10 +1189,10 @@ class SupabaseStorage {
     const limit = params.limit ?? 10;
     const from = (page - 1) * limit;
     const to = from + limit - 1;
+    const term = params.search?.trim();
 
     let matchingUserIds: string[] | undefined;
-    if (params.search?.trim()) {
-      const term = params.search.trim();
+    if (term) {
       const { data: profiles, error: profileError } = await this.db()
         .from("profiles")
         .select("id")
@@ -1183,9 +1203,12 @@ class SupabaseStorage {
 
     let q = this.db().from("orders").select("id, user_id, status, address, created_at", { count: "exact" });
     if (params.status && params.status !== "all") q = q.eq("status", params.status);
-    if (params.search?.trim()) {
-      const term = params.search.trim();
-      const orParts = [`address.ilike.%${term}%`, `status.ilike.%${term}%`];
+    if (term) {
+      const orParts = [
+        `id.ilike.%${term}%`,
+        `address.ilike.%${term}%`,
+        `status.ilike.%${term}%`
+      ];
       if (matchingUserIds?.length) {
         orParts.push(`user_id.in.(${matchingUserIds.join(",")})`);
       }

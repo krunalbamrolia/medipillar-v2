@@ -1,21 +1,31 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { CheckCircle2, ShoppingBag, ArrowLeft, Calendar, MapPin, Hash } from "lucide-react";
+import { CheckCircle2, ShoppingBag, ArrowLeft, Calendar, MapPin, Hash, MessageCircle } from "lucide-react";
 import { getOrderByIdApi } from "@/api/orders";
 import { format } from "date-fns";
+import { createOrderWhatsAppLink } from "@/lib/whatsapp";
+import { useToast } from "@/hooks/use-toast";
+
+const SHIPPING_SLOTS = [
+  { id: "morning", label: "Morning (9:00 AM - 12:00 PM)", value: "Morning (9:00 AM - 12:00 PM)" },
+  { id: "afternoon", label: "Afternoon (12:00 PM - 3:00 PM)", value: "Afternoon (12:00 PM - 3:00 PM)" },
+  { id: "evening", label: "Evening (3:00 PM - 6:00 PM)", value: "Evening (3:00 PM - 6:00 PM)" },
+];
 
 export default function OrderSuccess() {
   const [, params] = useRoute("/order-success/:id");
   const [, setLocation] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
   const orderId = params?.id;
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
   const { data: order, isLoading: orderLoading, error } = useQuery({
     queryKey: ["/api/orders", orderId],
@@ -24,6 +34,31 @@ export default function OrderSuccess() {
   });
 
   const isLoading = authLoading || orderLoading;
+
+  const handleWhatsAppShare = () => {
+    if (!selectedSlot) {
+      toast({
+        title: "Shipping Time Required",
+        description: "Please select a shipping time option before sharing on WhatsApp.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!order || !user) return;
+
+    const slotOption = SHIPPING_SLOTS.find(s => s.id === selectedSlot);
+    const selectedSlotText = slotOption ? slotOption.value : "";
+
+    const link = createOrderWhatsAppLink({
+      orderId: order.id,
+      selectedShippingTime: selectedSlotText,
+      items: order.items,
+      customerName: user.name || "Customer",
+      customerPhone: user.phone || ""
+    });
+    window.open(link, "_blank", "noopener,noreferrer");
+  };
 
   if (isLoading) {
     return (
@@ -117,39 +152,93 @@ export default function OrderSuccess() {
           </Card>
 
           {/* Summary Card */}
-          <Card className="border-0 shadow-md bg-white rounded-2xl mb-8">
+          <Card className="border border-gray-200 shadow-md bg-white rounded-2xl mb-6 overflow-hidden">
             <CardHeader className="border-b pb-4">
               <CardTitle className="text-xl">Order Summary</CardTitle>
               <CardDescription>Items in this order</CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader className="bg-gray-50/50">
-                  <TableRow>
-                    <TableHead>Medicine</TableHead>
-                    <TableHead className="text-right pr-6 w-[120px]">Quantity</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {order.items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium py-3.5 pl-6">
-                        <p>{item.medicineName}</p>
-                        {item.medicineSubName && (
-                          <p className="text-xs text-gray-400 font-normal">{item.medicineSubName}</p>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right pr-6 py-3.5">{item.quantity}</TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow className="bg-gray-50/30 font-bold border-t-2">
-                    <TableCell className="text-left text-base py-4 pl-6">Total Items</TableCell>
-                    <TableCell className="text-right text-base text-[#0d3d2e] py-4 pr-6">
-                      {totalItems}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+            <CardContent className="p-6">
+              {/* Header row */}
+              <div className="grid grid-cols-[1fr_120px] border-b pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <div>Medicine</div>
+                <div className="text-right">Quantity</div>
+              </div>
+
+              {/* Scrollable list of items */}
+              <div
+                className="divide-y overflow-y-auto scrollbar-thin pr-1"
+                style={{
+                  maxHeight: order.items.length > 3 ? "190px" : "auto",
+                  scrollBehavior: "smooth"
+                }}
+              >
+                {order.items.map((item) => (
+                  <div key={item.id} className="grid grid-cols-[1fr_120px] items-center py-3">
+                    <div className="font-semibold text-sm text-gray-900">
+                      <p>{item.medicineName}</p>
+                      {item.medicineSubName && (
+                        <p className="text-xs text-gray-400 font-normal mt-0.5">{item.medicineSubName}</p>
+                      )}
+                    </div>
+                    <div className="text-right text-sm text-gray-900 font-bold pr-2">{item.quantity}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total row */}
+              <div className="grid grid-cols-[1fr_120px] items-center border-t pt-4 mt-2 font-bold text-base text-gray-900">
+                <div>Total Items</div>
+                <div className="text-right text-[#0d3d2e] font-extrabold">{totalItems}</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Shipping Slot Card */}
+          <Card className="border border-gray-200 shadow-md bg-white rounded-2xl mb-8 overflow-hidden">
+            <CardHeader className="border-b pb-4">
+              <CardTitle className="text-xl">Preferred Shipping Time Slot</CardTitle>
+              <CardDescription>Select a preferred slot to coordinate delivery on WhatsApp</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {SHIPPING_SLOTS.map((slot) => {
+                  const isSelected = selectedSlot === slot.id;
+                  return (
+                    <button
+                      key={slot.id}
+                      type="button"
+                      onClick={() => setSelectedSlot(slot.id)}
+                      className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all duration-300 text-center ${
+                        isSelected
+                          ? "border-[#0d3d2e] bg-[#0d3d2e]/5 text-[#0d3d2e] scale-[1.02] shadow-sm font-semibold"
+                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700"
+                      }`}
+                    >
+                      <span className="font-bold text-sm">{slot.id.charAt(0).toUpperCase() + slot.id.slice(1)}</span>
+                      <span className="text-xs text-gray-500 mt-1">{slot.label.split(" (")[1]?.replace(")", "") || slot.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-6 border-t pt-4">
+                <Button
+                  onClick={handleWhatsAppShare}
+                  className={`w-full h-12 text-base font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-md ${
+                    selectedSlot
+                      ? "bg-green-600 hover:bg-green-700 text-white hover:shadow-lg animate-pulse"
+                      : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed hover:bg-gray-100"
+                  }`}
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  Inquire on WhatsApp
+                </Button>
+                {!selectedSlot && (
+                  <p className="text-xs text-center text-red-500 font-semibold mt-2 animate-pulse">
+                    Please select a shipping option to activate WhatsApp inquiry.
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
 

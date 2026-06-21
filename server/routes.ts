@@ -123,13 +123,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/users/:id/orders", requireAdmin, async (req, res) => {
     try {
-      const { page, limit, medicineName, quantity } = req.query;
-      const parsedQty = quantity !== undefined && quantity !== "" ? parseInt(quantity as string, 10) : undefined;
+      const { page, limit, medicineName } = req.query;
       const result = await storage.getAdminUserOrdersPaginated(req.params.id, {
         page: page ? parseInt(page as string, 10) : 1,
         limit: limit ? parseInt(limit as string, 10) : 10,
         medicineName: medicineName as string,
-        quantity: parsedQty,
       });
       if (!result) return res.status(404).json({ error: "User not found" });
       res.json(result);

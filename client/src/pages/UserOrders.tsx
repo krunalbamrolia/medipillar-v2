@@ -141,52 +141,59 @@ export default function UserOrders() {
       <Footer />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Order Details</DialogTitle>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-xl">
+          <DialogHeader className="pb-2 border-b">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-[#0d3d2e]">
+              Order Details
+            </DialogTitle>
           </DialogHeader>
           {selectedOrder ? (
             <div className="mt-4 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="p-4 bg-gray-50 border-0">
-                  <p className="text-sm text-gray-500 mb-1">Order ID</p>
-                  <p className="font-mono font-medium">{selectedOrder.id}</p>
+                <Card className="p-4 bg-gray-50 border shadow-sm rounded-xl">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Order ID</p>
+                  <p className="font-mono font-bold text-gray-900 break-all">{selectedOrder.id}</p>
                 </Card>
-                <Card className="p-4 bg-gray-50 border-0">
-                  <p className="text-sm text-gray-500 mb-1">Date</p>
-                  <p className="font-medium">{format(new Date(selectedOrder.createdAt), "PPP p")}</p>
+                <Card className="p-4 bg-gray-50 border shadow-sm rounded-xl">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Placed On</p>
+                  <p className="font-semibold text-gray-900">{format(new Date(selectedOrder.createdAt), "PPP p")}</p>
                 </Card>
-                <Card className="p-4 bg-gray-50 border-0">
-                  <p className="text-sm text-gray-500 mb-1">Status</p>
-                  <Badge variant="outline" className={`capitalize ${getStatusColor(selectedOrder.status)}`}>
+                <Card className="p-4 bg-gray-50 border shadow-sm rounded-xl">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Status</p>
+                  <Badge variant="outline" className={`mt-1 capitalize font-semibold ${getStatusColor(selectedOrder.status)}`}>
                     {selectedOrder.status}
                   </Badge>
                 </Card>
-                <Card className="p-4 bg-gray-50 border-0">
-                  <p className="text-sm text-gray-500 mb-1">Total items</p>
-                  <p className="font-medium">{orderDetails?.items?.length ?? 0}</p>
+                <Card className="p-4 bg-gray-50 border shadow-sm rounded-xl">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Total Items</p>
+                  <p className="font-semibold text-gray-900">{orderDetails?.items?.length ?? 0}</p>
                 </Card>
-                <Card className="p-4 bg-gray-50 border-0 md:col-span-2">
-                  <p className="text-sm text-gray-500 mb-1">Shipping Address</p>
-                  <p className="font-medium whitespace-pre-line">{orderDetails?.address ?? selectedOrder.address ?? "N/A"}</p>
+                <Card className="p-4 bg-gray-50 border shadow-sm rounded-xl md:col-span-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Shipping Address</p>
+                  <p className="font-medium text-gray-900 whitespace-pre-line">{orderDetails?.address ?? selectedOrder.address ?? "N/A"}</p>
                 </Card>
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold mb-4">Order items</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-700 mb-3">Order Items</h3>
                 {detailsLoading ? (
                   <div className="h-32 flex items-center justify-center">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#0d3d2e]" />
                   </div>
                 ) : (
-                  <div className="border rounded-md divide-y bg-white">
+                  <div className="border rounded-xl divide-y bg-white overflow-hidden shadow-sm">
                     {(orderDetails?.items ?? []).map((item: any) => (
-                      <div key={item.id} className="p-4 flex items-center justify-between gap-4">
+                      <div key={item.id} className="p-4 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
                         <div>
-                          <p className="font-medium">Product ID: <span className="font-mono text-sm text-gray-500">{item.medicineId}</span></p>
-                          <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                          <p className="font-bold text-gray-900 text-sm sm:text-base">{item.medicineName || "Unknown product"}</p>
+                          {item.medicineSubName && (
+                            <p className="text-xs text-gray-500 font-normal mt-0.5">{item.medicineSubName}</p>
+                          )}
+                          <p className="text-xs text-emerald-800 font-medium mt-1">Manufacturer: {item.companyName || "—"}</p>
                         </div>
-                        <span className="text-sm text-gray-500">Item ID: {item.id.slice(0, 8)}</span>
+                        <div className="text-right shrink-0">
+                          <span className="text-sm font-bold text-gray-800 bg-gray-100 px-3 py-1 rounded-full border">Qty {item.quantity}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
