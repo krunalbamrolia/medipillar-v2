@@ -83,28 +83,6 @@ export default function AdminOrders() {
     onSuccess: (updatedOrder, { status }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
       toast({ title: "Order status updated" });
-
-      // Auto-open WhatsApp when status becomes Shipped
-      if (status === "shipped" && updatedOrder?.user?.phone) {
-        const items: Array<{ medicineName: string; quantity: number }> =
-          (orderDetails?.items ?? []).map((i: OrderItemDetail) => ({
-            medicineName: i.medicineName,
-            quantity: i.quantity,
-          }));
-
-        // If dialog was open and we have items, use those; otherwise use a generic message
-        const waLink = createShippedNotificationLink({
-          customerPhone: updatedOrder.user.phone,
-          customerName: updatedOrder.user.name ?? "Customer",
-          orderId: updatedOrder.id,
-          items: items.length > 0 ? items : [{ medicineName: "Your order items", quantity: 1 }],
-        });
-        window.open(waLink, "_blank", "noopener,noreferrer");
-        toast({
-          title: "📱 WhatsApp opened",
-          description: "A pre-filled message is ready to send to the customer.",
-        });
-      }
     },
     onError: (err: Error) => {
       toast({

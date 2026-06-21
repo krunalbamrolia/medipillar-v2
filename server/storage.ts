@@ -950,7 +950,7 @@ class SupabaseStorage {
   async getAllMessages(): Promise<LegacyMessage[]> {
     const { data, error } = await this.db()
       .from("queries")
-      .select("id, user_id, name, phone, message, resolved, created_at")
+      .select("id, user_id, name, phone, email, message, resolved, created_at")
       .order("created_at", { ascending: false });
     this.handleError(error);
     return (data ?? []).map((r) => queryToLegacyMessage(rowToQuery(r)));
@@ -967,11 +967,11 @@ class SupabaseStorage {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    let q = this.db().from("queries").select("id, user_id, name, phone, message, resolved, created_at", { count: "exact" });
+    let q = this.db().from("queries").select("id, user_id, name, phone, email, message, resolved, created_at", { count: "exact" });
     if (params.resolved !== undefined) q = q.eq("resolved", params.resolved);
     if (params.search) {
       q = q.or(
-        `name.ilike.%${params.search}%,phone.ilike.%${params.search}%,message.ilike.%${params.search}%`,
+        `name.ilike.%${params.search}%,phone.ilike.%${params.search}%,email.ilike.%${params.search}%,message.ilike.%${params.search}%`,
       );
     }
     const { data, error, count } = await q
