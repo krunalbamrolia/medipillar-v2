@@ -66,9 +66,9 @@ export default function Home() {
   ];
 
   const stats = [
-    { value: isLoadingStats ? "..." : `${statsData?.companies ?? 0}`, label: "Company Partners" },
-    { value: isLoadingStats ? "..." : `${statsData?.medicines ?? 0}`, label: "Medicines Available" },
-    { value: isLoadingStats ? "..." : `${statsData?.orders ?? 0}`, label: "Orders Placed" },
+    { value: isLoadingStats ? "..." : `${statsData?.companies ?? 0}+`, label: "Company Partners" },
+    { value: isLoadingStats ? "..." : `${statsData?.medicines ?? 0}+`, label: "Medicines Available" },
+    { value: isLoadingStats ? "..." : `${statsData?.orders ?? 0}+`, label: "Orders Placed" },
   ];
 
   const reviews = [
@@ -274,15 +274,15 @@ export default function Home() {
               </div>
 
               <div className="absolute top-8 right-8 glass-effect rounded-2xl p-4 animate-float hover-scale">
-                <p className="text-3xl font-bold">{isLoadingStats ? "..." : statsData?.companies ?? 0}</p>
+                <p className="text-3xl font-bold">{isLoadingStats ? "..." : statsData?.companies ?? 0}+</p>
                 <p className="text-sm text-white/70">Companies</p>
               </div>
               <div className="absolute top-1/3 right-4 glass-effect rounded-2xl p-4 animate-float hover-scale" style={{ animationDelay: '0.5s' }}>
-                <p className="text-3xl font-bold">{isLoadingStats ? "..." : statsData?.medicines ?? 0}</p>
+                <p className="text-3xl font-bold">{isLoadingStats ? "..." : statsData?.medicines ?? 0}+</p>
                 <p className="text-sm text-white/70">Medicines</p>
               </div>
               <div className="absolute bottom-1/3 right-8 glass-effect rounded-2xl p-4 animate-float hover-scale" style={{ animationDelay: '1s' }}>
-                <p className="text-3xl font-bold">{isLoadingStats ? "..." : statsData?.orders ?? 0}</p>
+                <p className="text-3xl font-bold">{isLoadingStats ? "..." : statsData?.orders ?? 0}+</p>
                 <p className="text-sm text-white/70">Orders Placed</p>
               </div>
             </div>
