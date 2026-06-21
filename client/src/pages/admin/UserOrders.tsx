@@ -286,9 +286,9 @@ export default function AdminUserOrders() {
               )}
               <div className="grid gap-3 sm:grid-cols-3">
                 <Card className="border bg-muted/30 p-4 rounded-xl shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Order ID</p>
+                  <p className="text-xs font-semibold tracking-wider text-muted-foreground mb-1">Order ID</p>
                   <p className="font-mono font-bold text-foreground text-xs break-all">
-                    {selectedOrder.id}
+                    {selectedOrder.id.split("-")[0].toUpperCase()}
                   </p>
                 </Card>
                 <Card className="border bg-muted/30 p-4 rounded-xl shadow-sm">

@@ -624,6 +624,39 @@ class SupabaseStorage {
   }
 
   async deleteCategory(id: string): Promise<boolean> {
+    // First, get all medicines in this category
+    const { data: meds, error: medsError } = await this.db()
+      .from("medicines")
+      .select("id")
+      .eq("category_id", id);
+    this.handleError(medsError);
+
+    const medicineIds = (meds ?? []).map((m) => m.id as string);
+
+    if (medicineIds.length > 0) {
+      // Delete order_items referencing these medicines (bypasses ON DELETE RESTRICT)
+      const { error: oiError } = await this.db()
+        .from("order_items")
+        .delete()
+        .in("medicine_id", medicineIds);
+      this.handleError(oiError);
+
+      // Delete cart_items referencing these medicines
+      const { error: ciError } = await this.db()
+        .from("cart_items")
+        .delete()
+        .in("medicine_id", medicineIds);
+      this.handleError(ciError);
+
+      // Delete all medicines in this category
+      const { error: delMedsError } = await this.db()
+        .from("medicines")
+        .delete()
+        .eq("category_id", id);
+      this.handleError(delMedsError);
+    }
+
+    // Now delete the category itself
     const { error, count } = await this.db()
       .from("categories")
       .delete({ count: "exact" })
@@ -958,6 +991,21 @@ class SupabaseStorage {
   }
 
   async deleteMedicine(id: string): Promise<boolean> {
+    // Remove order_items referencing this medicine (bypasses ON DELETE RESTRICT)
+    const { error: oiError } = await this.db()
+      .from("order_items")
+      .delete()
+      .eq("medicine_id", id);
+    this.handleError(oiError);
+
+    // cart_items cascade automatically, but explicitly clean up to be safe
+    const { error: ciError } = await this.db()
+      .from("cart_items")
+      .delete()
+      .eq("medicine_id", id);
+    this.handleError(ciError);
+
+    // Now delete the medicine
     const { error, count } = await this.db()
       .from("medicines")
       .delete({ count: "exact" })

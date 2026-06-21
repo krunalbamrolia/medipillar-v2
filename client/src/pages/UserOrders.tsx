@@ -115,7 +115,7 @@ export default function UserOrders() {
                 <TableBody>
                   {orders.map((order) => (
                     <TableRow key={order.id} className="hover:bg-gray-50">
-                      <TableCell className="font-mono text-sm">{order.id.slice(0, 8).toUpperCase()}</TableCell>
+                      <TableCell className="font-mono text-sm">{order.id.split("-")[0].toUpperCase()}</TableCell>
                       <TableCell>{format(new Date(order.createdAt), "MMM dd, yyyy")}</TableCell>
                       <TableCell>
                         <div className="inline-flex items-center gap-2">
@@ -151,8 +151,8 @@ export default function UserOrders() {
             <div className="mt-4 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="p-4 bg-gray-50 border shadow-sm rounded-xl">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Order ID</p>
-                  <p className="font-mono font-bold text-gray-900 break-all">{selectedOrder.id}</p>
+                  <p className="text-xs font-semibold tracking-wider text-gray-500 mb-1">Order ID</p>
+                  <p className="font-mono font-bold text-gray-900 break-all">{selectedOrder.id.split("-")[0].toUpperCase()}</p>
                 </Card>
                 <Card className="p-4 bg-gray-50 border shadow-sm rounded-xl">
                   <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Placed On</p>

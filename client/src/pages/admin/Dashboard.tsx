@@ -327,7 +327,7 @@ export default function AdminDashboard() {
                   {recentOrders.map((order) => (
                     <TableRow key={order.id} className="hover:bg-muted/20">
                       <TableCell className="font-mono text-xs font-semibold">
-                        {order.id.slice(0, 8).toUpperCase()}
+                        {order.id.split("-")[0].toUpperCase()}
                       </TableCell>
                       <TableCell className="font-medium text-sm">
                         {order.user?.name ?? "Guest User"}

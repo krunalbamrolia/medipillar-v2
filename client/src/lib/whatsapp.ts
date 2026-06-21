@@ -34,8 +34,8 @@ export function createPartnerWhatsAppLink(data: {
 }
 
 /**
- * Builds a wa.me link to notify a customer that their order has been shipped.
- * The admin's browser opens this link in a new tab; the admin clicks Send.
+ * Builds a wa.me link to notify a customer about their order status.
+ * Professional format — no emojis, actual product names with quantities.
  */
 export function createShippedNotificationLink(data: {
   customerPhone: string;
@@ -43,22 +43,22 @@ export function createShippedNotificationLink(data: {
   orderId: string;
   items: Array<{ medicineName: string; quantity: number }>;
 }): string {
-  const shortId = data.orderId.slice(0, 8).toUpperCase();
+  const shortId = data.orderId.split("-")[0].toUpperCase();
   const itemLines = data.items
-    .map((i) => `  • ${i.medicineName} × ${i.quantity}`)
+    .map((i) => `* ${i.medicineName} x ${i.quantity}`)
     .join("\n");
 
   const message = [
-    `Hello ${data.customerName}! 🚚`,
+    `Hello ${data.customerName},`,
     ``,
-    `Great news! Your Medipillar order *#${shortId}* has been *shipped*.`,
+    `Your Medipillar order #${shortId} has been shipped.`,
     ``,
-    `📦 Items:`,
+    `Ordered Items:`,
     itemLines,
     ``,
-    `Your order is on its way. We'll update you once it's delivered.`,
+    `Your order is on the way and will be delivered soon.`,
     ``,
-    `Thank you for choosing Medipillar! 🌿`,
+    `Thank you for choosing Medipillar.`,
   ].join("\n");
 
   // Format customer phone to international format for wa.me
@@ -79,10 +79,11 @@ export function createOrderWhatsAppLink(data: {
   customerName: string;
   customerPhone: string;
 }): string {
+  const shortId = data.orderId.split("-")[0].toUpperCase();
   const lines = [
     "Order Inquiry",
     "",
-    `Order ID: ${data.orderId}`,
+    `Order ID: ${shortId}`,
     "",
     "Selected Shipping Option:",
     data.selectedShippingTime,

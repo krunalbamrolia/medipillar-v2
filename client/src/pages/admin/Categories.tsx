@@ -7,6 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
@@ -36,6 +46,7 @@ export default function AdminCategories() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [categoryToDelete, setCategoryToDelete] = useState<CategoryRow | null>(null);
   const debouncedSearch = useDebouncedValue(search);
   const limit = 10;
 
@@ -72,7 +83,18 @@ export default function AdminCategories() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories/paginated"] });
-      toast({ title: "Category deleted" });
+      queryClient.invalidateQueries({ queryKey: ["/api/medicines"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/medicines/paginated"] });
+      toast({ title: "Category and associated products deleted" });
+      setCategoryToDelete(null);
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "Could not delete category",
+        description: parseApiError(err.message),
+        variant: "destructive",
+      });
+      setCategoryToDelete(null);
     },
   });
 
@@ -190,7 +212,7 @@ export default function AdminCategories() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => deleteMutation.mutate(category.id)}
+                      onClick={() => setCategoryToDelete(category)}
                       disabled={deleteMutation.isPending}
                       data-testid={`button-delete-category-${category.id}`}
                     >
@@ -203,6 +225,30 @@ export default function AdminCategories() {
           </TableBody>
         </Table>
       </AdminTableShell>
+
+      <AlertDialog open={!!categoryToDelete} onOpenChange={(open) => !open && setCategoryToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete category?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deleting <strong>{categoryToDelete?.name}</strong> will permanently remove all
+              associated products and their order history references. This action cannot be undone.
+              <br /><br />
+              Do you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
+              onClick={() => categoryToDelete && deleteMutation.mutate(categoryToDelete.id)}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete Category"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

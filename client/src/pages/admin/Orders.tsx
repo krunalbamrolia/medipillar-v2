@@ -162,7 +162,7 @@ export default function AdminOrders() {
                 return (
                   <TableRow key={order.id}>
                     <TableCell className="font-mono text-xs sm:text-sm">
-                      {order.id.slice(0, 8).toUpperCase()}
+                      {order.id.split("-")[0].toUpperCase()}
                     </TableCell>
                     <TableCell>
                       <p className="font-medium">{order.user?.name ?? "—"}</p>
@@ -220,25 +220,6 @@ export default function AdminOrders() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Quick WhatsApp button for already-shipped orders */}
-                        {isShipped && order.user?.phone && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-green-200 text-green-700 hover:bg-green-50"
-                            onClick={() => {
-                              const waLink = createShippedNotificationLink({
-                                customerPhone: order.user!.phone!,
-                                customerName: order.user!.name ?? "Customer",
-                                orderId: order.id,
-                                items: [{ medicineName: "Your order items", quantity: 1 }],
-                              });
-                              window.open(waLink, "_blank", "noopener,noreferrer");
-                            }}
-                          >
-                            <MessageCircle className="h-4 w-4" />
-                          </Button>
-                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -271,9 +252,9 @@ export default function AdminOrders() {
             <div className="mt-4 space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Card className="border bg-muted/30 p-4 shadow-sm rounded-xl">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Order ID</p>
+                  <p className="text-xs font-semibold tracking-wider text-muted-foreground mb-1">Order ID</p>
                   <p className="font-mono font-bold text-foreground text-sm break-all">
-                    {selectedOrder.id}
+                    {selectedOrder.id.split("-")[0].toUpperCase()}
                   </p>
                 </Card>
                 <Card className="border bg-muted/30 p-4 shadow-sm rounded-xl">

@@ -252,8 +252,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Category not found" });
       }
       res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ error: "Failed to delete category" });
+    } catch (error: any) {
+      console.error("Failed to delete category:", error);
+      res.status(500).json({ error: error?.message ?? "Failed to delete category" });
     }
   });
 
@@ -349,13 +350,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     app.get("/api/medicines/paginated", async (req, res) => {
       try {
-        const { companyId, categoryId, search, page, limit } = req.query;
+        const { companyId, categoryId, search, page, limit, sortBy } = req.query;
         const result = await storage.getMedicinesPaginated({
           companyId: companyId as string,
           categoryId: categoryId as string,
           search: search as string,
           page: page ? parseInt(page as string) : 1,
-          limit: limit ? parseInt(limit as string) : 10
+          limit: limit ? parseInt(limit as string) : 10,
+          sortBy: sortBy as string
         });
         res.json(result);
       } catch (error) {
@@ -427,8 +429,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Medicine not found" });
       }
       res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ error: "Failed to delete medicine" });
+    } catch (error: any) {
+      console.error("Failed to delete medicine:", error);
+      res.status(500).json({ error: error?.message ?? "Failed to delete medicine" });
     }
   });
 
