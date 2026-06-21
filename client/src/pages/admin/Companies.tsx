@@ -20,11 +20,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Building2, Trash2 } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { cleanFormData, parseApiError } from "@/lib/formUtils";
 import { z } from "zod";
-import { Company, InsertCompany, insertCompanySchema } from "@shared/schema";
-import type { PaginatedResult } from "@shared/types/database";
+import { insertCompanySchema } from "@shared/schema";
+import type { Company, InsertCompany, PaginatedResult } from "@/api/types";
+import { getCompaniesPaginatedApi, createCompanyApi, updateCompanyApi, deleteCompanyApi } from "@/api/companies";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminSearchBar } from "@/components/admin/AdminSearchBar";
 import { AdminPagination } from "@/components/admin/AdminPagination";
@@ -51,20 +52,11 @@ export default function AdminCompanies() {
 
   const { data, isLoading, isFetching } = useQuery<PaginatedResult<Company>>({
     queryKey: ["/api/companies/paginated", debouncedSearch, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-        ...(debouncedSearch ? { search: debouncedSearch } : {}),
-      });
-      const res = await fetch(`/api/companies/paginated?${params}`);
-      if (!res.ok) throw new Error("Failed to fetch companies");
-      return res.json();
-    },
+    queryFn: () => getCompaniesPaginatedApi({ page, limit, search: debouncedSearch }),
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: InsertCompany) => apiRequest("POST", "/api/companies", payload),
+    mutationFn: createCompanyApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/companies"] });
       queryClient.invalidateQueries({ queryKey: ["/api/companies/paginated"] });
@@ -82,7 +74,7 @@ export default function AdminCompanies() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data: patch }: { id: string; data: Partial<Company> }) =>
-      apiRequest("PATCH", `/api/companies/${id}`, patch),
+      updateCompanyApi(id, patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/companies"] });
       queryClient.invalidateQueries({ queryKey: ["/api/companies/paginated"] });
@@ -99,7 +91,7 @@ export default function AdminCompanies() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/companies/${id}`, {}),
+    mutationFn: deleteCompanyApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/companies"] });
       queryClient.invalidateQueries({ queryKey: ["/api/companies/paginated"] });

@@ -22,6 +22,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { ArrowLeft, Pill, Building2, MessageCircle, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
 import type { Company, Medicine } from "@shared/types/catalog";
 import type { Category } from "@shared/schema";
+import { getCompanyByIdApi } from "@/api/companies";
+import { getMedicinesPaginatedApi } from "@/api/products";
+import { getCategoryByIdApi } from "@/api/categories";
+import { addCartItemApi } from "@/api/cart";
 
 interface PaginatedMedicines {
   data: Medicine[];
@@ -59,26 +63,19 @@ export default function CompanyDetail() {
 
   const { data: company, isLoading: loadingCompany } = useQuery<Company>({
     queryKey: ["/api/companies", companyId],
+    queryFn: () => getCompanyByIdApi(companyId!),
     enabled: !!companyId,
   });
 
   const { data: paginatedMedicines, isLoading: loadingMedicines, isFetching } = useQuery<PaginatedMedicines>({
     queryKey: ["/api/medicines/paginated", companyId, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        companyId: companyId!,
-        page: String(page),
-        limit: String(limit),
-        status: "active"
-      });
-      const res = await fetch(`/api/medicines/paginated?${params}`);
-      return res.json();
-    },
+    queryFn: () => getMedicinesPaginatedApi({ companyId, page, limit, status: "active" }) as any,
     enabled: !!companyId,
   });
 
   const { data: category } = useQuery<Category>({
     queryKey: ["/api/categories", company?.categoryId],
+    queryFn: () => getCategoryByIdApi(company!.categoryId!),
     enabled: !!company?.categoryId,
   });
 
@@ -87,17 +84,8 @@ export default function CompanyDetail() {
   const totalPages = paginatedMedicines?.totalPages || 1;
 
   const addToCartMutation = useMutation({
-    mutationFn: async ({ medicineId, quantity }: { medicineId: string; quantity: number }) => {
-      const res = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ medicineId, quantity }),
-      });
-      if (!res.ok) {
-        throw new Error((await res.text()) || "Failed to add to cart");
-      }
-      return res.json();
-    },
+    mutationFn: ({ medicineId, quantity }: { medicineId: string; quantity: number }) =>
+      addCartItemApi(medicineId, quantity),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       const medName = companyMedicines.find((m) => m.id === variables.medicineId)?.name ?? "item";

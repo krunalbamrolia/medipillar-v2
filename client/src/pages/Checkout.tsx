@@ -11,6 +11,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { CheckCircle2, ArrowLeft } from "lucide-react";
 import type { CartItem } from "@shared/schema";
 import type { Medicine } from "@shared/types/catalog";
+import { getCartApi } from "@/api/cart";
+import { getMedicinesApi } from "@/api/products";
+import { createOrderApi } from "@/api/orders";
 
 export default function Checkout() {
   const { user, isLoading: authLoading } = useAuth();
@@ -21,25 +24,19 @@ export default function Checkout() {
 
   const { data: cartItems = [], isLoading: cartLoading } = useQuery<CartItem[]>({
     queryKey: ["/api/cart"],
+    queryFn: getCartApi,
     enabled: !!user,
   });
 
   const { data: medicines = [] } = useQuery<Medicine[]>({
     queryKey: ["/api/medicines"],
+    queryFn: getMedicinesApi,
   });
 
   const [address, setAddress] = useState("");
 
   const placeOrder = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address }),
-      });
-      if (!res.ok) throw new Error("Failed to place order");
-      return res.json();
-    },
+    mutationFn: () => createOrderApi({ address }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });

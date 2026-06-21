@@ -16,8 +16,8 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, UserCheck, UserX, Mail, Phone, Package, History } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { PaginatedResult, Profile, ProfileWithOrders } from "@shared/types/database";
+import { queryClient } from "@/lib/queryClient";
+import type { PaginatedResult, Profile, ProfileWithOrders } from "@/api/types";
 import { format } from "date-fns";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminSearchBar } from "@/components/admin/AdminSearchBar";
@@ -25,6 +25,7 @@ import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { UserOrderCard } from "@/components/admin/UserOrderCard";
+import { getUsersApi, getAdminUserDetailApi, updateUserStatusApi } from "@/api/users";
 
 type UserRow = Profile & { orderCount: number };
 
@@ -39,31 +40,18 @@ export default function AdminUsers() {
 
   const { data, isLoading, isFetching } = useQuery<PaginatedResult<UserRow>>({
     queryKey: ["/api/admin/users", debouncedSearch, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-        ...(debouncedSearch ? { search: debouncedSearch } : {}),
-      });
-      const res = await fetch(`/api/admin/users?${params}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load users");
-      return res.json();
-    },
+    queryFn: () => getUsersApi({ page, limit, search: debouncedSearch }),
   });
 
   const { data: userDetail, isLoading: detailLoading } = useQuery<ProfileWithOrders>({
     queryKey: ["/api/admin/users", selectedUserId, "detail"],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/users/${selectedUserId}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load user");
-      return res.json();
-    },
+    queryFn: () => getAdminUserDetailApi(selectedUserId!),
     enabled: !!selectedUserId && dialogOpen,
   });
 
   const statusMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      apiRequest("PATCH", `/api/admin/users/${id}/status`, { isActive }),
+      updateUserStatusApi(id, isActive),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       if (selectedUserId) {

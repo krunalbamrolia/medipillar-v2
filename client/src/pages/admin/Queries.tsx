@@ -21,8 +21,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Eye, MessageSquare, User, Phone, PhoneCall, Mail, ExternalLink, CheckCircle, RefreshCw } from "lucide-react";
-import type { PaginatedResult, Query } from "@shared/types/database";
-import { apiRequest } from "@/lib/queryClient";
+import type { PaginatedResult, Query } from "@/api/types";
+import { getQueriesPaginatedApi, resolveQueryApi } from "@/api/queries";
 
 export default function AdminQueries() {
   const [search, setSearch] = useState("");
@@ -33,25 +33,12 @@ export default function AdminQueries() {
 
   const { data, isLoading } = useQuery<PaginatedResult<Query>>({
     queryKey: ["/api/admin/queries", search, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: "10",
-        ...(search ? { search } : {}),
-      });
-      const res = await fetch(`/api/admin/queries?${params}`, {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to load queries");
-      return res.json();
-    },
+    queryFn: () => getQueriesPaginatedApi({ page, limit: 10, search }),
   });
 
   const resolveMutation = useMutation({
-    mutationFn: async ({ id, resolved }: { id: string; resolved: boolean }) => {
-      const res = await apiRequest("PATCH", `/api/admin/queries/${id}/resolve`, { resolved });
-      return res.json() as Promise<Query>;
-    },
+    mutationFn: ({ id, resolved }: { id: string; resolved: boolean }) =>
+      resolveQueryApi(id, resolved),
     onSuccess: (updatedQuery: Query) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/queries"] });
       // If the currently viewed query is updated, reflect it in the details modal

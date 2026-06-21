@@ -13,6 +13,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { Pill, Package, AlertCircle, Info, Building2, MessageCircle, ShoppingCart, Plus, Minus } from "lucide-react";
 import { createWhatsAppLink } from "@/lib/whatsapp";
 import type { Medicine, Company } from "@shared/types/catalog";
+import { getMedicineByIdApi } from "@/api/products";
+import { getCompanyByIdApi } from "@/api/companies";
+import { addCartItemApi } from "@/api/cart";
 
 interface MedicineModalProps {
   medicineId: string | null;
@@ -29,26 +32,19 @@ export function MedicineModal({ medicineId, open, onOpenChange }: MedicineModalP
 
   const { data: medicine, isLoading, isError } = useQuery<Medicine>({
     queryKey: ["/api/medicines", medicineId],
+    queryFn: () => getMedicineByIdApi(medicineId!),
     enabled: !!medicineId && open,
   });
 
   const { data: company } = useQuery<Company>({
     queryKey: ["/api/companies", medicine?.companyId],
+    queryFn: () => getCompanyByIdApi(medicine!.companyId!),
     enabled: !!medicine?.companyId && open,
   });
 
   const addToCartMutation = useMutation({
-    mutationFn: async ({ medicineId, quantity }: { medicineId: string; quantity: number }) => {
-      const res = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ medicineId, quantity }),
-      });
-      if (!res.ok) {
-        throw new Error(await res.text() || "Failed to add to cart");
-      }
-      return res.json();
-    },
+    mutationFn: ({ medicineId, quantity }: { medicineId: string; quantity: number }) =>
+      addCartItemApi(medicineId, quantity),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       toast({

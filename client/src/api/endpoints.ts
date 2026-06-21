@@ -1,0 +1,58 @@
+export const ENDPOINTS = {
+  auth: {
+    session: "/api/auth/session",
+    verifyResetSession: "/api/auth/verify-reset-session",
+    logout: "/api/auth/logout",
+    me: "/api/auth/me",
+    checkPhone: "/api/auth/check-phone",
+    checkEmail: "/api/auth/check-email",
+    loginPhone: "/api/auth/login-phone",
+    loginEmail: "/api/auth/login-email",
+    setupAccount: "/api/auth/setup-account",
+    forgotPassword: "/api/auth/forgot-password",
+    resetPassword: "/api/auth/reset-password",
+  },
+  admin: {
+    login: "/api/admin/login",
+    logout: "/api/admin/logout",
+    me: "/api/admin/me",
+    stats: "/api/admin/stats",
+    users: "/api/admin/users",
+    userDetail: (id: string) => `/api/admin/users/${id}`,
+    userOrders: (id: string) => `/api/admin/users/${id}/orders`,
+    userStatus: (id: string) => `/api/admin/users/${id}/status`,
+    queries: "/api/admin/queries",
+    resolveQuery: (id: string) => `/api/admin/queries/${id}/resolve`,
+    orders: "/api/admin/orders",
+    orderStatus: (id: string) => `/api/admin/orders/${id}/status`,
+    orderItemTracked: (id: string) => `/api/admin/order-items/${id}/tracked`,
+  },
+  messages: {
+    base: "/api/messages",
+    detail: (id: string) => `/api/messages/${id}`,
+  },
+  categories: {
+    base: "/api/categories",
+    paginated: "/api/categories/paginated",
+    detail: (id: string) => `/api/categories/${id}`,
+  },
+  companies: {
+    base: "/api/companies",
+    paginated: "/api/companies/paginated",
+    detail: (id: string) => `/api/companies/${id}`,
+  },
+  medicines: {
+    base: "/api/medicines",
+    paginated: "/api/medicines/paginated",
+    detail: (id: string) => `/api/medicines/${id}`,
+  },
+  search: "/api/search",
+  cart: {
+    base: "/api/cart",
+    detail: (id: string) => `/api/cart/${id}`,
+  },
+  orders: {
+    base: "/api/orders",
+    detail: (id: string) => `/api/orders/${id}`,
+  },
+};

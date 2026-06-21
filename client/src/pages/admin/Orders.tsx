@@ -9,8 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, Mail, Phone, MapPin, User, Lock, MessageCircle } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { AdminOrder, OrderItemDetail, PaginatedResult } from "@shared/types/database";
+import { queryClient } from "@/lib/queryClient";
+import type { AdminOrder, OrderItemDetail, PaginatedResult } from "@/api/types";
+import { getAdminOrdersApi, getOrderByIdApi, updateOrderStatusApi } from "@/api/orders";
 import { OrderItemsTable } from "@/components/admin/OrderItemsTable";
 import { format } from "date-fns";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
@@ -43,17 +44,7 @@ export default function AdminOrders() {
 
   const { data, isLoading, isFetching } = useQuery<PaginatedResult<AdminOrder>>({
     queryKey: ["/api/admin/orders", page, statusFilter, debouncedSearch],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-      });
-      if (statusFilter !== "all") params.append("status", statusFilter);
-      if (debouncedSearch) params.append("search", debouncedSearch);
-      const res = await fetch(`/api/admin/orders?${params.toString()}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch orders");
-      return res.json();
-    },
+    queryFn: () => getAdminOrdersApi({ page, limit, status: statusFilter, search: debouncedSearch }),
   });
 
   const { data: orderDetails, isLoading: detailsLoading } = useQuery<{
@@ -63,23 +54,13 @@ export default function AdminOrders() {
     status: string;
   }>({
     queryKey: ["/api/orders", selectedOrder?.id],
-    queryFn: async () => {
-      const res = await fetch(`/api/orders/${selectedOrder?.id}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch details");
-      return res.json();
-    },
+    queryFn: () => getOrderByIdApi(selectedOrder!.id),
     enabled: !!selectedOrder?.id && dialogOpen,
   });
 
   const updateStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const res = await apiRequest("PATCH", `/api/admin/orders/${id}/status`, { status });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: "Failed to update order status" }));
-        throw new Error(body.error ?? "Failed to update order status");
-      }
-      return res.json();
-    },
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      updateOrderStatusApi(id, status),
     onSuccess: (updatedOrder, { status }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
       toast({ title: "Order status updated" });

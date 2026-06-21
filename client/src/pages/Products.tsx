@@ -26,8 +26,11 @@ import {
   Pill,
   ArrowRight,
 } from "lucide-react";
-import type { Company } from "@shared/types/catalog";
-import type { Category } from "@shared/schema";
+import type { Company, Category, PaginatedResult } from "@/api/types";
+import { getCompaniesApi } from "@/api/companies";
+import { getCategoriesApi } from "@/api/categories";
+import { getMedicinesPaginatedApi } from "@/api/products";
+import { addCartItemApi } from "@/api/cart";
 import { getCompanyLogoUrl } from "@/lib/companyLogo";
 
 interface MedicineWithRelations {
@@ -102,6 +105,7 @@ export default function Products() {
   // Fetch companies
   const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<Company[]>({
     queryKey: ["/api/companies"],
+    queryFn: getCompaniesApi,
   });
   const activeCompanies = companies.filter((c) => c.status === "active");
 
@@ -129,10 +133,11 @@ export default function Products() {
   // Fetch categories for filters
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
+    queryFn: getCategoriesApi,
   });
 
   // Fetch paginated medicines (only when in products view)
-  const { data: paginatedData, isLoading, isFetching } = useQuery<PaginatedMedicineResponse>({
+  const { data: paginatedData, isLoading, isFetching } = useQuery<PaginatedResult<MedicineWithRelations>>({
     queryKey: [
       "/api/medicines/paginated",
       selectedCompanyId,
@@ -140,23 +145,13 @@ export default function Products() {
       searchQuery,
       page,
     ],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-      });
-      if (selectedCompanyId && selectedCompanyId !== "all") {
-        params.append("companyId", selectedCompanyId);
-      }
-      if (selectedCategoryId && selectedCategoryId !== "all") {
-        params.append("categoryId", selectedCategoryId);
-      }
-      if (searchQuery.trim()) {
-        params.append("search", searchQuery.trim());
-      }
-      const res = await fetch(`/api/medicines/paginated?${params}`);
-      return res.json();
-    },
+    queryFn: () => getMedicinesPaginatedApi({
+      page,
+      limit,
+      companyId: selectedCompanyId !== "all" ? selectedCompanyId : undefined,
+      categoryId: selectedCategoryId !== "all" ? selectedCategoryId : undefined,
+      search: searchQuery
+    }) as any,
     enabled: currentView === "products",
   });
 
@@ -174,17 +169,8 @@ export default function Products() {
 
   // Add to cart mutation
   const addToCartMutation = useMutation({
-    mutationFn: async ({ medicineId, quantity }: { medicineId: string; quantity: number }) => {
-      const res = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ medicineId, quantity }),
-      });
-      if (!res.ok) {
-        throw new Error((await res.text()) || "Failed to add to cart");
-      }
-      return res.json();
-    },
+    mutationFn: ({ medicineId, quantity }: { medicineId: string; quantity: number }) =>
+      addCartItemApi(medicineId, quantity),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       const medName = paginatedData?.data.find((m) => m.id === variables.medicineId)?.name ?? "item";

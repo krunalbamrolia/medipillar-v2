@@ -29,6 +29,8 @@ import {
   Tooltip,
 } from "recharts";
 import { format } from "date-fns";
+import { getAdminStatsApi } from "@/api/auth";
+import { getAdminOrdersApi } from "@/api/orders";
 
 interface DashboardStats {
   companies: number;
@@ -63,22 +65,12 @@ export default function AdminDashboard() {
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/admin/stats"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/stats", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load stats");
-      return res.json();
-    },
+    queryFn: getAdminStatsApi,
   });
 
   const { data: recentOrdersData, isLoading: ordersLoading } = useQuery({
     queryKey: ["/api/admin/orders", "recent"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/orders?limit=5", {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to load orders");
-      return res.json();
-    },
+    queryFn: () => getAdminOrdersApi({ page: 1, limit: 5 }),
   });
 
   const recentOrders: any[] = recentOrdersData?.data ?? [];

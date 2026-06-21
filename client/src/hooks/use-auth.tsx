@@ -1,15 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-
-export interface User {
-  id: string;
-  phone: string;
-  name: string;
-  email?: string | null;
-  accountSetupComplete?: boolean;
-  createdAt: string;
-}
+import {
+  getMeApi,
+  checkPhoneApi,
+  checkEmailApi,
+  syncSessionApi,
+  setupAccountApi,
+  loginPhoneApi,
+  loginEmailApi,
+  forgotPasswordApi,
+  resetPasswordApi,
+  logoutApi,
+} from "@/api/auth";
+import { addCartItemApi } from "@/api/cart";
+import type { User } from "@/api/types";
 
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -26,41 +31,18 @@ export function useAuth() {
 
   const { data: user, isLoading, error } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
-    queryFn: async () => {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
-      if (res.status === 401) return null;
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
+    queryFn: getMeApi,
     retry: false,
   });
 
   // ─── Check phone ──────────────────────────────────────────────
   const checkPhoneMutation = useMutation({
-    mutationFn: async (phone: string) => {
-      const res = await fetch("/api/auth/check-phone", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ phone }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json() as Promise<{ exists: boolean; needsSetup: boolean }>;
-    },
+    mutationFn: checkPhoneApi,
   });
 
   // ─── Check email ──────────────────────────────────────────────
   const checkEmailMutation = useMutation({
-    mutationFn: async (email: string) => {
-      const res = await fetch("/api/auth/check-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json() as Promise<{ exists: boolean }>;
-    },
+    mutationFn: checkEmailApi,
   });
 
   // ─── Request OTP (new users only) ────────────────────────────
@@ -117,21 +99,12 @@ export function useAuth() {
         sessionStorage.getItem(PENDING_PROFILE_KEY) ?? "{}",
       ) as { name?: string; phone?: string; email?: string };
 
-      const res = await fetch("/api/auth/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          accessToken: data.session.access_token,
-          name: pending.name ?? "User",
-          phone: pending.phone ?? formatted,
-          email: pending.email || undefined,
-        }),
+      return syncSessionApi({
+        accessToken: data.session.access_token,
+        name: pending.name ?? "User",
+        phone: pending.phone ?? formatted,
+        email: pending.email || undefined,
       });
-
-      if (!res.ok) throw new Error(await res.text());
-      sessionStorage.removeItem(PENDING_PROFILE_KEY);
-      return res.json() as Promise<{ success: boolean; user: User; needsSetup: boolean }>;
     },
     onSuccess: (data) => {
       if (!data.needsSetup) {
@@ -139,7 +112,6 @@ export function useAuth() {
         toast({ title: "Logged in successfully" });
         _runPendingCartAction(queryClient, toast);
       }
-      // If needsSetup=true, the modal handles showing the setup screen
     },
     onError: (err: Error) => {
       toast({
@@ -152,19 +124,7 @@ export function useAuth() {
 
   // ─── Setup account (after OTP) ────────────────────────────────
   const setupAccountMutation = useMutation({
-    mutationFn: async ({ email, password }: { email: string; password: string }) => {
-      const res = await fetch("/api/auth/setup-account", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: "Setup failed" }));
-        throw new Error(body.error ?? "Setup failed");
-      }
-      return res.json() as Promise<{ success: boolean; user: User }>;
-    },
+    mutationFn: setupAccountApi,
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/auth/me"], data.user);
       toast({ title: "Account created!", description: "You are now logged in." });
@@ -181,19 +141,7 @@ export function useAuth() {
 
   // ─── Login with phone + password ──────────────────────────────
   const loginWithPhoneMutation = useMutation({
-    mutationFn: async ({ phone, password }: { phone: string; password: string }) => {
-      const res = await fetch("/api/auth/login-phone", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ phone, password }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: "Login failed" }));
-        throw new Error(body.error ?? "Login failed");
-      }
-      return res.json() as Promise<{ success: boolean; user: User }>;
-    },
+    mutationFn: loginPhoneApi,
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/auth/me"], data.user);
       toast({ title: "Logged in successfully" });
@@ -210,19 +158,7 @@ export function useAuth() {
 
   // ─── Login with email + password ──────────────────────────────
   const loginWithEmailMutation = useMutation({
-    mutationFn: async ({ email, password }: { email: string; password: string }) => {
-      const res = await fetch("/api/auth/login-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: "Login failed" }));
-        throw new Error(body.error ?? "Login failed");
-      }
-      return res.json() as Promise<{ success: boolean; user: User }>;
-    },
+    mutationFn: loginEmailApi,
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/auth/me"], data.user);
       toast({ title: "Logged in successfully" });
@@ -239,20 +175,7 @@ export function useAuth() {
 
   // ─── Forgot password ──────────────────────────────────────────
   const forgotPasswordMutation = useMutation({
-    mutationFn: async (phoneOrEmail: string) => {
-      const isEmail = phoneOrEmail.includes("@");
-      const body = isEmail
-        ? { email: phoneOrEmail }
-        : { phone: phoneOrEmail };
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json() as Promise<{ success: boolean; phone?: string }>;
-    },
+    mutationFn: forgotPasswordApi,
     onError: (err: Error) => {
       toast({
         title: "Error",
@@ -265,19 +188,7 @@ export function useAuth() {
   // ─── Reset password (after forgot-password OTP) ───────────────
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ password }: { phone?: string; otp?: string; password: string }) => {
-      // The OTP was already verified during the forgot-otp step, which established the reset session on the backend.
-      // We directly submit the new password to our backend.
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ password }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: "Reset failed" }));
-        throw new Error(body.error ?? "Reset failed");
-      }
-      return res.json();
+      return resetPasswordApi(password);
     },
     onSuccess: () => {
       toast({ title: "Password reset successfully", description: "You can now log in with your new password." });
@@ -293,10 +204,7 @@ export function useAuth() {
 
   // ─── Logout ───────────────────────────────────────────────────
   const logoutMutation = useMutation({
-    mutationFn: async () => {
-      await supabase.auth.signOut();
-      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-    },
+    mutationFn: logoutApi,
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/me"], null);
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
@@ -308,11 +216,9 @@ export function useAuth() {
     user: user ?? undefined,
     isLoading,
     isError: !!error,
-    // Existing
     requestOtp: requestOtpMutation.mutateAsync,
     verifyOtp: verifyOtpMutation.mutateAsync,
     logout: logoutMutation.mutateAsync,
-    // New
     checkPhone: checkPhoneMutation.mutateAsync,
     checkEmail: checkEmailMutation.mutateAsync,
     setupAccount: setupAccountMutation.mutateAsync,
@@ -333,19 +239,13 @@ function _runPendingCartAction(queryClient: ReturnType<typeof useQueryClient>, t
   if (!pending) return;
   try {
     const { medicineId, quantity } = JSON.parse(pending);
-    fetch("/api/cart", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ medicineId, quantity }),
-    }).then((res) => {
-      if (res.ok) {
-        queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-        toast({
-          title: "Item added to cart",
-          description: "Your pending cart item was added successfully.",
-        });
-        sessionStorage.removeItem("pending_cart_action");
-      }
+    addCartItemApi(medicineId, quantity).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+      toast({
+        title: "Item added to cart",
+        description: "Your pending cart item was added successfully.",
+      });
+      sessionStorage.removeItem("pending_cart_action");
     });
   } catch (e) {
     console.error(e);

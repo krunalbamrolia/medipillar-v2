@@ -9,8 +9,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import type { OrderItemDetail } from "@shared/types/database";
+import { updateOrderItemTrackedApi } from "@/api/orders";
 
 interface OrderItemsTableProps {
   items: OrderItemDetail[];
@@ -23,7 +24,7 @@ export function OrderItemsTable({ items, orderId, showTracking = true }: OrderIt
 
   const trackMutation = useMutation({
     mutationFn: ({ itemId, tracked }: { itemId: string; tracked: boolean }) =>
-      apiRequest("PATCH", `/api/admin/order-items/${itemId}/tracked`, { tracked }),
+      updateOrderItemTrackedApi(itemId, tracked),
     onSuccess: () => {
       if (orderId) {
         queryClient.invalidateQueries({ queryKey: ["/api/orders", orderId] });

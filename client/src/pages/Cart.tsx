@@ -10,6 +10,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { Trash2, Minus, Plus, ShoppingCart, ArrowRight } from "lucide-react";
 import type { CartItem } from "@shared/schema";
 import type { Medicine } from "@shared/types/catalog";
+import { getCartApi, updateCartItemApi, removeCartItemApi } from "@/api/cart";
+import { getMedicinesApi } from "@/api/products";
 
 export default function Cart() {
   const { user, isLoading: authLoading } = useAuth();
@@ -19,31 +21,23 @@ export default function Cart() {
 
   const { data: cartItems = [], isLoading: cartLoading } = useQuery<CartItem[]>({
     queryKey: ["/api/cart"],
+    queryFn: getCartApi,
     enabled: !!user,
   });
 
   const { data: medicines = [] } = useQuery<Medicine[]>({
     queryKey: ["/api/medicines"],
+    queryFn: getMedicinesApi,
   });
 
   const updateQuantity = useMutation({
-    mutationFn: async ({ id, quantity }: { id: string; quantity: number }) => {
-      const res = await fetch(`/api/cart/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quantity }),
-      });
-      if (!res.ok) throw new Error("Failed to update quantity");
-      return res.json();
-    },
+    mutationFn: ({ id, quantity }: { id: string; quantity: number }) =>
+      updateCartItemApi(id, quantity),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/cart"] }),
   });
 
   const removeItem = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/cart/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to remove item");
-    },
+    mutationFn: (id: string) => removeCartItemApi(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/cart"] }),
   });
 

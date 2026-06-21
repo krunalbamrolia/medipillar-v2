@@ -11,9 +11,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Phone, MapPin, Send, Clock, Sparkles } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
 import { insertMessageSchema, type InsertMessage } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import { createMessageApi } from "@/api/queries";
 
 export default function Contact() {
   const { toast } = useToast();
@@ -42,7 +42,7 @@ export default function Contact() {
 
   const submitMutation = useMutation({
     mutationFn: (data: InsertMessage) =>
-      apiRequest("POST", "/api/messages", data),
+      createMessageApi(data),
     onSuccess: () => {
       toast({
         title: "Message sent!",

@@ -20,12 +20,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Pill, Trash2 } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { cleanFormData, parseApiError } from "@/lib/formUtils";
 import { SearchableCombobox } from "@/components/admin/SearchableCombobox";
 import { insertMedicineSchema, type InsertMedicine } from "@shared/schema";
-import type { Medicine, Company } from "@shared/types/catalog";
-import type { PaginatedResult } from "@shared/types/database";
+import type { Medicine, Company, PaginatedResult } from "@/api/types";
+import { getMedicinesPaginatedApi, createMedicineApi, updateMedicineApi, deleteMedicineApi } from "@/api/products";
+import { getCompaniesApi } from "@/api/companies";
+import { getCategoriesApi } from "@/api/categories";
 import { z } from "zod";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminSearchBar } from "@/components/admin/AdminSearchBar";
@@ -78,31 +80,24 @@ export default function AdminMedicines() {
 
   const { data, isLoading, isFetching } = useQuery<PaginatedResult<MedicineRow>>({
     queryKey: ["/api/medicines/paginated", debouncedSearch, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-        ...(debouncedSearch ? { search: debouncedSearch } : {}),
-      });
-      const res = await fetch(`/api/medicines/paginated?${params}`);
-      if (!res.ok) throw new Error("Failed to fetch medicines");
-      return res.json();
-    },
+    queryFn: () => getMedicinesPaginatedApi({ page, limit, search: debouncedSearch }),
   });
 
   const { data: companies = [] } = useQuery<Company[]>({
     queryKey: ["/api/companies"],
+    queryFn: getCompaniesApi,
   });
 
   const { data: categories = [] } = useQuery<{ id: string; name: string }[]>({
     queryKey: ["/api/categories"],
+    queryFn: getCategoriesApi,
   });
 
   const companyOptions = companies.map((c) => ({ id: c.id, label: c.name }));
   const categoryOptions = categories.map((c) => ({ id: c.id, label: c.name }));
 
   const createMutation = useMutation({
-    mutationFn: (payload: InsertMedicine) => apiRequest("POST", "/api/medicines", payload),
+    mutationFn: createMedicineApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/medicines"] });
       queryClient.invalidateQueries({ queryKey: ["/api/medicines/paginated"] });
@@ -120,7 +115,7 @@ export default function AdminMedicines() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data: patch }: { id: string; data: Partial<Medicine> }) =>
-      apiRequest("PATCH", `/api/medicines/${id}`, patch),
+      updateMedicineApi(id, patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/medicines"] });
       queryClient.invalidateQueries({ queryKey: ["/api/medicines/paginated"] });
@@ -137,7 +132,7 @@ export default function AdminMedicines() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/medicines/${id}`, {}),
+    mutationFn: deleteMedicineApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/medicines"] });
       queryClient.invalidateQueries({ queryKey: ["/api/medicines/paginated"] });

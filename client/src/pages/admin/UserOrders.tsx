@@ -24,7 +24,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Separator } from "@/components/ui/separator";
 import { OrderItemsTable } from "@/components/admin/OrderItemsTable";
 import { ArrowLeft, Eye, Mail, MapPin, Package, Phone, X } from "lucide-react";
-import type { AdminUserOrderDetail, AdminUserOrdersPage, OrderItemDetail } from "@shared/types/database";
+import type { AdminUserOrderDetail, AdminUserOrdersPage, OrderItemDetail } from "@/api/types";
+import { getAdminUserOrdersApi } from "@/api/users";
+import { getOrderByIdApi } from "@/api/orders";
 import { format } from "date-fns";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminSearchBar } from "@/components/admin/AdminSearchBar";
@@ -72,21 +74,12 @@ export default function AdminUserOrders() {
       debouncedMedicine,
       quantityFilter,
     ],
-    queryFn: async () => {
-      const searchParams = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-      });
-      if (debouncedMedicine) searchParams.set("medicineName", debouncedMedicine);
-      if (quantityParam !== undefined && !Number.isNaN(quantityParam)) {
-        searchParams.set("quantity", String(quantityParam));
-      }
-      const res = await fetch(`/api/admin/users/${userId}/orders?${searchParams}`, {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to load orders");
-      return res.json();
-    },
+    queryFn: () => getAdminUserOrdersApi(userId!, {
+      page,
+      limit,
+      medicineName: debouncedMedicine,
+      quantity: quantityParam,
+    }),
     enabled: !!userId,
   });
 
@@ -107,11 +100,7 @@ export default function AdminUserOrders() {
     items: OrderItemDetail[];
   }>({
     queryKey: ["/api/orders", selectedOrder?.id],
-    queryFn: async () => {
-      const res = await fetch(`/api/orders/${selectedOrder?.id}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load order");
-      return res.json();
-    },
+    queryFn: () => getOrderByIdApi(selectedOrder!.id),
     enabled: detailOpen && !!selectedOrder?.id,
   });
 

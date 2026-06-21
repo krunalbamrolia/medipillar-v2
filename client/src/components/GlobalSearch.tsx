@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Building2, Pill, X, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Company, Medicine } from "@shared/types/catalog";
+import { searchAllApi } from "@/api/products";
+import { getCompaniesApi } from "@/api/companies";
 
 interface GlobalSearchProps {
   onMedicineSelect?: (medicineId: string) => void;
@@ -35,16 +37,16 @@ export function GlobalSearch({ onMedicineSelect, placeholder = "Search companies
 
   const { data: searchResults, isLoading } = useQuery<SearchResult>({
     queryKey: ["/api/search", debouncedQuery],
-    queryFn: async () => {
-      if (!debouncedQuery) return { companies: [], medicines: [] };
-      const res = await fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`);
-      return res.json();
+    queryFn: () => {
+      if (!debouncedQuery) return Promise.resolve({ companies: [], medicines: [] });
+      return searchAllApi(debouncedQuery);
     },
     enabled: debouncedQuery.length > 0
   });
 
   const { data: companies = [] } = useQuery<Company[]>({
     queryKey: ["/api/companies"],
+    queryFn: getCompaniesApi,
   });
 
   const filteredCompanies = searchResults?.companies || [];

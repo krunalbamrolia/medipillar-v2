@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { Package, Clock, CheckCircle2, Truck, XCircle, Eye } from "lucide-react";
-import type { Order } from "@shared/schema";
+import type { Order } from "@/api/types";
+import { getUserOrdersApi, getOrderByIdApi } from "@/api/orders";
 import { format } from "date-fns";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -23,17 +24,13 @@ export default function UserOrders() {
 
   const { data: orders = [], isLoading: ordersLoading } = useQuery<Order[]>({
     queryKey: ["/api/orders"],
+    queryFn: getUserOrdersApi,
     enabled: !!user,
   });
 
   const { data: orderDetails, isLoading: detailsLoading } = useQuery({
     queryKey: ["/api/orders", selectedOrder?.id],
-    queryFn: async () => {
-      if (!selectedOrder?.id) return null;
-      const res = await fetch(`/api/orders/${selectedOrder.id}`);
-      if (!res.ok) throw new Error("Failed to fetch order details");
-      return res.json();
-    },
+    queryFn: () => getOrderByIdApi(selectedOrder!.id),
     enabled: !!selectedOrder?.id && dialogOpen,
   });
 

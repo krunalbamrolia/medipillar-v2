@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { verifyResetSessionApi } from "@/api/auth";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -267,18 +268,7 @@ export function AuthModal() {
       // Sync reset session with backend
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session?.access_token) {
-        const res = await fetch("/api/auth/verify-reset-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            accessToken: sessionData.session.access_token,
-          }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({ error: "Verification failed" }));
-          throw new Error(body.error ?? "Verification failed");
-        }
+        await verifyResetSessionApi(sessionData.session.access_token);
       } else {
         throw new Error("No active session found. Please try again.");
       }

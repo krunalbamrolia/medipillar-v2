@@ -4,18 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Trash2 } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Message } from "@shared/schema";
+import { queryClient } from "@/lib/queryClient";
+import type { Message } from "@/api/types";
+import { getMessagesApi, deleteMessageApi } from "@/api/queries";
 
 export default function AdminMessages() {
   const { toast } = useToast();
 
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["/api/messages"],
+    queryFn: getMessagesApi,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/messages/${id}`, {}),
+    mutationFn: deleteMessageApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
       toast({ title: "Message deleted successfully" });

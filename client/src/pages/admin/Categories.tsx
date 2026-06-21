@@ -9,11 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2 } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { parseApiError } from "@/lib/formUtils";
-import { insertCategorySchema, type InsertCategory } from "@shared/schema";
+import { insertCategorySchema } from "@shared/schema";
 import { z } from "zod";
-import type { PaginatedResult } from "@shared/types/database";
+import type { Category, InsertCategory, PaginatedResult } from "@/api/types";
+import { getCategoriesPaginatedApi, createCategoryApi, deleteCategoryApi } from "@/api/categories";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminSearchBar } from "@/components/admin/AdminSearchBar";
 import { AdminPagination } from "@/components/admin/AdminPagination";
@@ -45,20 +46,11 @@ export default function AdminCategories() {
 
   const { data, isLoading, isFetching } = useQuery<PaginatedResult<CategoryRow>>({
     queryKey: ["/api/categories/paginated", debouncedSearch, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-        ...(debouncedSearch ? { search: debouncedSearch } : {}),
-      });
-      const res = await fetch(`/api/categories/paginated?${params}`);
-      if (!res.ok) throw new Error("Failed to fetch categories");
-      return res.json();
-    },
+    queryFn: () => getCategoriesPaginatedApi({ page, limit, search: debouncedSearch }) as any,
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: InsertCategory) => apiRequest("POST", "/api/categories", payload),
+    mutationFn: createCategoryApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories/paginated"] });
@@ -76,7 +68,7 @@ export default function AdminCategories() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/categories/${id}`, {}),
+    mutationFn: deleteCategoryApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories/paginated"] });

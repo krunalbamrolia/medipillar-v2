@@ -8,7 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Pill, Lock } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { adminLoginApi } from "@/api/auth";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -31,8 +31,7 @@ export default function AdminLogin() {
   });
 
   const loginMutation = useMutation({
-    mutationFn: (data: LoginForm) =>
-      apiRequest("POST", "/api/admin/login", data),
+    mutationFn: adminLoginApi,
     onSuccess: () => {
       toast({
         title: "Login successful",
