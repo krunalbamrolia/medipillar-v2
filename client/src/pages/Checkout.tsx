@@ -20,7 +20,6 @@ export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isSuccess, setIsSuccess] = useState(false);
 
   const { data: cartItems = [], isLoading: cartLoading } = useQuery<CartItem[]>({
     queryKey: ["/api/cart"],
@@ -37,10 +36,10 @@ export default function Checkout() {
 
   const placeOrder = useMutation({
     mutationFn: () => createOrderApi({ address }),
-    onSuccess: () => {
+    onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      setIsSuccess(true);
+      setLocation(`/order-success/${order.id}`);
     },
     onError: () => {
       toast({ title: "Confirm Order Failed", description: "Something went wrong.", variant: "destructive" });
@@ -71,32 +70,9 @@ export default function Checkout() {
   const totalItems = enrichedItems.reduce((acc, item) => acc + item.quantity, 0);
 
   const handlePlaceOrder = () => {
+    if (placeOrder.isPending) return;
     placeOrder.mutate();
   };
-
-  if (isSuccess) {
-    return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        <Navigation />
-        <main className="flex-1 flex items-center justify-center p-4">
-          <Card className="max-w-md w-full text-center p-8 border-0 shadow-lg">
-            <CheckCircle2 className="w-20 h-20 text-green-500 mx-auto mb-6" />
-            <h2 className="text-3xl font-bold mb-4">Order Placed!</h2>
-            <p className="text-gray-500 mb-8">Your order has been successfully placed. We will notify you once it's confirmed.</p>
-            <div className="flex flex-col gap-4">
-              <Button onClick={() => setLocation("/orders")} className="bg-[#0d3d2e] hover:bg-[#0a5240]">
-                View My Orders
-              </Button>
-              <Button variant="outline" onClick={() => setLocation("/")}>
-                Return Home
-              </Button>
-            </div>
-          </Card>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -10,7 +10,8 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
 
   const { data: auth, isLoading } = useQuery({
     queryKey: ["/api/admin/me"],
@@ -24,6 +25,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       setLocation("/admin");
     }
   }, [auth, isLoading, setLocation]);
+
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+  }, [location]);
 
   const style = {
     "--sidebar-width": "16rem",
@@ -50,7 +57,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <header className="flex items-center justify-between p-4 border-b bg-background">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
           </header>
-          <main className="flex-1 overflow-auto p-8 bg-background">
+          <main ref={mainRef} className="flex-1 overflow-auto p-8 bg-background">
             {children}
           </main>
         </div>

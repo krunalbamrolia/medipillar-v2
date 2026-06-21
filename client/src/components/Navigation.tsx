@@ -5,11 +5,22 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Pill } from "lucide-react";
 import { AuthModal } from "./AuthModal";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
+import { getCartApi } from "@/api/cart";
+import type { CartItem } from "@/api/types";
 
 export function Navigation() {
   const [location] = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const { user } = useAuth();
+
+  const { data: cartItems = [] } = useQuery<CartItem[]>({
+    queryKey: ["/api/cart"],
+    queryFn: getCartApi,
+    enabled: !!user,
+  });
+
+  const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -74,6 +85,11 @@ export function Navigation() {
             <Link href="/cart">
               <Button variant="ghost" size="icon" className="relative text-gray-600 hover:text-[#0d3d2e] hover:bg-[#0d3d2e]/5">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shopping-cart"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#0d3d2e] text-[10px] font-bold text-white shadow-sm border border-white px-1 min-w-[18px]">
+                    {cartCount}
+                  </span>
+                )}
               </Button>
             </Link>
           )}
@@ -106,14 +122,19 @@ export function Navigation() {
                 <Link key={link.href} href={link.href}>
                   <Button
                     variant="ghost"
-                    className={`w-full justify-start font-medium text-base py-3 rounded-xl transition-all duration-300 animate-slide-in-left ${isActive(link.href)
+                    className={`w-full justify-start font-medium text-base py-3 rounded-xl transition-all duration-300 animate-slide-in-left flex items-center justify-between ${isActive(link.href)
                         ? "text-[#0d3d2e] bg-[#0d3d2e]/10"
                         : "text-gray-600 hover:text-[#0d3d2e] hover:bg-gray-100"
                       }`}
                     style={{ animationDelay: `${index * 0.1}s` }}
                     data-testid={`link-mobile-${link.label.toLowerCase().replace(" ", "-")}`}
                   >
-                    {link.label}
+                    <span>{link.label}</span>
+                    {link.href === "/cart" && cartCount > 0 && (
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0d3d2e] text-[10px] font-bold text-white min-w-[20px] px-1">
+                        {cartCount}
+                      </span>
+                    )}
                   </Button>
                 </Link>
               ))}

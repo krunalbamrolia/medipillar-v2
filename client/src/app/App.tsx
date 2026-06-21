@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import { useEffect } from "react";
+import { Switch, Route, useLocation } from "wouter";
 import { AppProviders } from "./providers";
 
 import Home from "@/pages/Home";
@@ -11,6 +12,7 @@ import BecomePartner from "@/pages/BecomePartner";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import UserOrders from "@/pages/UserOrders";
+import OrderSuccess from "@/pages/OrderSuccess";
 import NotFound from "@/pages/not-found";
 
 import AdminLogin from "@/pages/admin/Login";
@@ -24,10 +26,22 @@ import AdminUsers from "@/pages/admin/Users";
 import AdminUserOrders from "@/pages/admin/UserOrders";
 import AdminQueries from "@/pages/admin/Queries";
 
+function ScrollToTop() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+
+  return null;
+}
+
 function AppRouter() {
   return (
-    <Switch>
-      <Route path="/" component={Home} />
+    <>
+      <ScrollToTop />
+      <Switch>
+        <Route path="/" component={Home} />
       <Route path="/about" component={About} />
       <Route path="/products" component={Products} />
       <Route path="/contact" component={Contact} />
@@ -37,6 +51,7 @@ function AppRouter() {
       <Route path="/cart" component={Cart} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/orders" component={UserOrders} />
+      <Route path="/order-success/:id" component={OrderSuccess} />
 
       <Route path="/admin" component={AdminLogin} />
       <Route path="/admin/dashboard">
@@ -98,6 +113,7 @@ function AppRouter() {
 
       <Route component={NotFound} />
     </Switch>
+    </>
   );
 }
 
