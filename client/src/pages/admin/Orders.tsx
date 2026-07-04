@@ -41,6 +41,36 @@ export default function AdminOrders() {
   const debouncedSearch = useDebouncedValue(search);
   const limit = 10;
   const { toast } = useToast();
+  const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null);
+
+  const handleWhatsAppClick = async (order: AdminOrder) => {
+    if (!order.user?.phone) return;
+    setLoadingOrderId(order.id);
+    try {
+      const details = await queryClient.fetchQuery({
+        queryKey: ["/api/orders", order.id],
+        queryFn: () => getOrderByIdApi(order.id),
+      });
+      const waLink = createShippedNotificationLink({
+        customerPhone: order.user.phone,
+        customerName: order.user.name ?? "Customer",
+        orderId: order.id,
+        items: (details.items ?? []).map((i: OrderItemDetail) => ({
+          medicineName: i.medicineName,
+          quantity: i.quantity,
+        })),
+      });
+      window.open(waLink, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      toast({
+        title: "Error preparing WhatsApp message",
+        description: error instanceof Error ? error.message : "Failed to load order items",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingOrderId(null);
+    }
+  };
 
   const { data, isLoading, isFetching } = useQuery<PaginatedResult<AdminOrder>>({
     queryKey: ["/api/admin/orders", page, statusFilter, debouncedSearch],
@@ -220,6 +250,21 @@ export default function AdminOrders() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {order.status === "shipped" && order.user?.phone && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800"
+                            onClick={() => handleWhatsAppClick(order)}
+                            disabled={loadingOrderId === order.id}
+                          >
+                            {loadingOrderId === order.id ? (
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-green-700 border-t-transparent" />
+                            ) : (
+                              <MessageCircle className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -315,7 +360,7 @@ export default function AdminOrders() {
                   />
                 )}
               </div>
-              
+
               {/* WhatsApp notify button inside dialog for shipped orders */}
               {selectedOrder.status === "shipped" && selectedOrder.user?.phone && (
                 <div className="rounded-lg border border-green-200 bg-green-50 p-3 flex items-center justify-between gap-3">
