@@ -1,4 +1,4 @@
-import type { Company as SchemaCompany, Medicine as SchemaMedicine } from "@shared/schema";
+import type { Company as SchemaCompany, Medicine as SchemaMedicine } from "../schema";
 
 /** UI catalog types — same as API with optional legacy display fields */
 export type Company = SchemaCompany & {

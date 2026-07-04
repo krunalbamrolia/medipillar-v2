@@ -12,7 +12,7 @@ import type {
   OrderItemDetail,
   Query,
   PaginatedResult,
-} from "@shared/types/database";
+} from "../shared/types/database";
 
 export type {
   Profile as User,

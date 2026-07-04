@@ -11,7 +11,7 @@ import {
   insertCartItemSchema,
   insertOrderSchema,
   insertOrderItemSchema
-} from "@shared/schema";
+} from "../shared/schema";
 import { DuplicateError } from "./errors";
 import { requireAdmin, requireUser, verifySupabaseAccessToken } from "./middleware";
 import { databaseSetupHint, isMissingTableError, verifyDatabaseTables } from "./db-health";
