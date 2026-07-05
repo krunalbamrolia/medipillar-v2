@@ -192,7 +192,7 @@ class SupabaseStorage {
 
   async connectDatabase(): Promise<boolean> {
     if (!isSupabaseConfigured()) {
-      console.warn("Supabase not configured — set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
+      console.warn("Supabase not configured — set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
       return false;
     }
     const { ok } = await verifyDatabaseTables();

@@ -35,7 +35,7 @@ export async function verifyDatabaseTables(): Promise<{
   missing: string[];
 }> {
   if (!isSupabaseConfigured()) {
-    console.warn("[db] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set in .env");
+    console.warn("[db] VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set in .env");
     return { ok: false, missing: [...REQUIRED_TABLES] };
   }
 

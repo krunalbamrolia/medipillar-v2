@@ -28,7 +28,10 @@ app.use(express.urlencoded({ extended: false }));
 let sessionStore;
 if (process.env.DATABASE_URL) {
   const PgSession = pgSession(session);
-  const pgPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  const pgPool = new pg.Pool({ 
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
   sessionStore = new PgSession({
     pool: pgPool,
     tableName: 'user_sessions',
