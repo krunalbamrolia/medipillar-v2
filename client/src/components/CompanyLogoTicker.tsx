@@ -14,7 +14,7 @@ export function CompanyLogoTicker({ companies }: CompanyLogoTickerProps) {
     <section className="py-10 bg-muted/30 border-y overflow-hidden" aria-label="Partner companies">
       <div className="overflow-hidden">
         <div className="flex w-max animate-scroll items-center">
-          {items.map((company, i) => {
+          {items.slice(0, 50).map((company, i) => {
             const logoSrc = getCompanyLogoUrl(company.name, company.logoUrl ?? company.photo);
 
             return (
