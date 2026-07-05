@@ -1,5 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import pgSession from "connect-pg-simple";
+import pg from "pg";
 import { registerRoutes } from "../server/routes";
 import { connectMongoDB as connectDatabase } from "../server/storage";
 
@@ -23,8 +25,20 @@ app.use(
 );
 app.use(express.urlencoded({ extended: false }));
 
+let sessionStore;
+if (process.env.DATABASE_URL) {
+  const PgSession = pgSession(session);
+  const pgPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  sessionStore = new PgSession({
+    pool: pgPool,
+    tableName: 'user_sessions',
+    createTableIfMissing: true
+  });
+}
+
 app.use(
   session({
+    store: sessionStore,
     secret: process.env.SESSION_SECRET || "medipillar-super-secret",
     resave: false,
     saveUninitialized: false,
