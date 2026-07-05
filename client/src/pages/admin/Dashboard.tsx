@@ -75,6 +75,10 @@ export default function AdminDashboard() {
 
   const recentOrders: any[] = recentOrdersData?.data ?? [];
 
+  const sortedCategories = stats?.categoryData 
+    ? [...stats.categoryData].sort((a, b) => b.value - a.value)
+    : [];
+
   const statCards = [
     {
       title: "Active Users",
@@ -237,11 +241,21 @@ export default function AdminDashboard() {
                 <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">
                   Loading breakdown...
                 </div>
-              ) : stats?.categoryData && stats.categoryData.length > 0 ? (
+              ) : sortedCategories.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={stats.categoryData}
+                      data={
+                        sortedCategories.length > 10
+                          ? [
+                              ...sortedCategories.slice(0, 10),
+                              {
+                                name: "Other Categories",
+                                value: sortedCategories.slice(10).reduce((acc, curr) => acc + curr.value, 0)
+                              }
+                            ]
+                          : sortedCategories
+                      }
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
@@ -249,7 +263,10 @@ export default function AdminDashboard() {
                       paddingAngle={3}
                       dataKey="value"
                     >
-                      {stats.categoryData.map((entry, index) => (
+                      {(sortedCategories.length > 10
+                        ? [...sortedCategories.slice(0, 10), { name: "Other" }]
+                        : sortedCategories
+                      ).map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                       ))}
                     </Pie>
@@ -269,9 +286,9 @@ export default function AdminDashboard() {
                 </div>
               )}
               {/* Center total number indicator */}
-              {!statsLoading && stats?.categoryData && stats.categoryData.length > 0 && (
+              {!statsLoading && sortedCategories.length > 0 && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-2xl font-black">{stats.medicines}</span>
+                  <span className="text-2xl font-black">{stats?.medicines}</span>
                   <span className="text-[10px] uppercase font-bold text-muted-foreground">Medicines</span>
                 </div>
               )}
@@ -279,13 +296,20 @@ export default function AdminDashboard() {
             
             {/* Custom Legend list for category breakdown */}
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              {!statsLoading && stats?.categoryData?.map((item, idx) => (
+              {!statsLoading && sortedCategories.slice(0, 10).map((item, idx) => (
                 <div key={item.name} className="flex items-center gap-1.5 min-w-0">
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }} />
-                  <span className="truncate text-muted-foreground font-medium">{item.name}</span>
+                  <span className="truncate text-muted-foreground font-medium" title={item.name}>{item.name}</span>
                   <span className="font-bold text-foreground">({item.value})</span>
                 </div>
               ))}
+              {!statsLoading && sortedCategories.length > 10 && (
+                <div className="col-span-2 mt-1 pt-2 border-t border-border/30">
+                  <span className="text-muted-foreground italic font-medium">
+                    + {sortedCategories.length - 10} more categories...
+                  </span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
