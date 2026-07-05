@@ -2,6 +2,7 @@
   "name": "medipillar-v2",
   "version": "2.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx server/index.ts",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",

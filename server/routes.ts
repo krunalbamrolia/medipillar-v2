@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { hashPassword, verifyPassword } from "./auth";
+import { storage } from "./storage.js";
+import { hashPassword, verifyPassword } from "./auth.js";
 import {
   insertAdminSchema,
   insertCategorySchema,
@@ -11,10 +11,10 @@ import {
   insertCartItemSchema,
   insertOrderSchema,
   insertOrderItemSchema
-} from "../shared/schema";
-import { DuplicateError } from "./errors";
-import { requireAdmin, requireUser, verifySupabaseAccessToken } from "./middleware";
-import { databaseSetupHint, isMissingTableError, verifyDatabaseTables } from "./db-health";
+} from "../shared/schema.js";
+import { DuplicateError } from "./errors.js";
+import { requireAdmin, requireUser, verifySupabaseAccessToken } from "./middleware.js";
+import { databaseSetupHint, isMissingTableError, verifyDatabaseTables } from "./db-health.js";
 import { z } from "zod";
 
 const profileSyncSchema = z.object({

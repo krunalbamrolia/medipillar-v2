@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
-import { getSupabaseAdmin } from "./supabase";
-import { storage } from "./storage";
+import { getSupabaseAdmin } from "./supabase.js";
+import { storage } from "./storage.js";
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.session.adminId) {

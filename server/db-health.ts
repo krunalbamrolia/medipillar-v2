@@ -1,4 +1,4 @@
-import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
+import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase.js";
 
 /** Tables the Express API reads/writes via Supabase */
 export const REQUIRED_TABLES = [

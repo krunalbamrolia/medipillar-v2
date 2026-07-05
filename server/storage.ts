@@ -1,6 +1,6 @@
-import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
-import { databaseSetupHint, isMissingTableError, verifyDatabaseTables } from "./db-health";
-import { DuplicateError } from "./errors";
+import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase.js";
+import { databaseSetupHint, isMissingTableError, verifyDatabaseTables } from "./db-health.js";
+import { DuplicateError } from "./errors.js";
 import type {
   Profile,
   Company,
@@ -12,7 +12,7 @@ import type {
   OrderItemDetail,
   Query,
   PaginatedResult,
-} from "../shared/types/database";
+} from "../shared/types/database.js";
 
 export type {
   Profile as User,

@@ -2,8 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
 import pg from "pg";
-import { registerRoutes } from "../server/routes";
-import { connectMongoDB as connectDatabase } from "../server/storage";
+import { registerRoutes } from "../server/routes.js";
+import { connectMongoDB as connectDatabase } from "../server/storage.js";
 
 const app = express();
 

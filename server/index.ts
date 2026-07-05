@@ -2,9 +2,9 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
 import pg from "pg";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
-import { connectMongoDB as connectDatabase } from "./storage";
+import { registerRoutes } from "./routes.js";
+import { setupVite, serveStatic, log } from "./vite.js";
+import { connectMongoDB as connectDatabase } from "./storage.js";
 import dotenv from "dotenv";
 
 dotenv.config();
