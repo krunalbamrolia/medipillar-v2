@@ -15,7 +15,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, UserCheck, UserX, Mail, Phone, Package, History } from "lucide-react";
+import { Eye, UserCheck, UserX, Mail, Phone, Package, History, Store, Building2, Stethoscope, Pencil, Save, X } from "lucide-react";
+import { client } from "@/api/client";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { queryClient } from "@/lib/queryClient";
 import type { PaginatedResult, Profile, ProfileWithOrders } from "@/api/types";
 import { format } from "date-fns";
@@ -61,6 +64,27 @@ export default function AdminUsers() {
     },
     onError: (err: Error) => {
       toast({ title: "Update failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const [isEditingMedical, setIsEditingMedical] = useState(false);
+  const [editMedicalName, setEditMedicalName] = useState("");
+  const [editHospitalName, setEditHospitalName] = useState("");
+  const [editDrSpecialist, setEditDrSpecialist] = useState("");
+
+  const updateMedicalMutation = useMutation({
+    mutationFn: (fields: { medicalName?: string; hospitalName?: string; drSpecialist?: string }) =>
+      client.patch(`/api/admin/users/${selectedUserId}/medical-fields`, fields),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      if (selectedUserId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/users", selectedUserId, "detail"] });
+      }
+      toast({ title: "Medical details updated successfully!" });
+      setIsEditingMedical(false);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to update medical details", description: err.message, variant: "destructive" });
     },
   });
 
@@ -209,15 +233,118 @@ export default function AdminUsers() {
                     {userDetail.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="h-3.5 w-3.5" />
-                  {userDetail.phone}
+                <div className="space-y-1.5 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-foreground">{userDetail.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-foreground">{userDetail.email ?? "—"}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Mail className="h-3.5 w-3.5" />
-                  {userDetail.email ?? "—"}
+
+                <div className="pt-2 border-t space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Medical Information
+                    </p>
+                    {!isEditingMedical ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs gap-1 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                        onClick={() => {
+                          setEditMedicalName(userDetail.medicalName || "");
+                          setEditHospitalName(userDetail.hospitalName || "");
+                          setEditDrSpecialist(userDetail.drSpecialist || "");
+                          setIsEditingMedical(true);
+                        }}
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Edit Details
+                      </Button>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs px-2"
+                          onClick={() => setIsEditingMedical(false)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs gap-1 bg-emerald-700 hover:bg-emerald-800 text-white"
+                          disabled={updateMedicalMutation.isPending}
+                          onClick={() => {
+                            updateMedicalMutation.mutate({
+                              medicalName: editMedicalName.trim(),
+                              hospitalName: editHospitalName.trim(),
+                              drSpecialist: editDrSpecialist.trim(),
+                            });
+                          }}
+                        >
+                          <Save className="h-3 w-3" />
+                          Save
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {!isEditingMedical ? (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Store className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span>Medical Name: <strong className="text-foreground">{userDetail.medicalName || "—"}</strong></span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Building2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span>Hospital Name: <strong className="text-foreground">{userDetail.hospitalName || "—"}</strong></span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Stethoscope className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span>Dr Specialist: <strong className="text-foreground">{userDetail.drSpecialist || "—"}</strong></span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 pt-1 bg-muted/40 p-2.5 rounded-lg border">
+                      <div>
+                        <Label className="text-xs">Medical Name</Label>
+                        <Input
+                          size={1}
+                          className="h-8 text-xs mt-1"
+                          placeholder="Medical store / shop name"
+                          value={editMedicalName}
+                          onChange={(e) => setEditMedicalName(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Hospital Name</Label>
+                        <Input
+                          size={1}
+                          className="h-8 text-xs mt-1"
+                          placeholder="Hospital / clinic name"
+                          value={editHospitalName}
+                          onChange={(e) => setEditHospitalName(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Dr. Specialist</Label>
+                        <Input
+                          size={1}
+                          className="h-8 text-xs mt-1"
+                          placeholder="Doctor name & specialization"
+                          value={editDrSpecialist}
+                          onChange={(e) => setEditDrSpecialist(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground">
+
+                <p className="text-xs text-muted-foreground pt-1 border-t">
                   Joined {format(new Date(userDetail.createdAt), "PPP")}
                 </p>
               </Card>

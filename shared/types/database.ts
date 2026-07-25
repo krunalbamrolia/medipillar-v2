@@ -5,6 +5,9 @@ export interface Profile {
   name: string;
   phone: string;
   email: string | null;
+  medicalName?: string | null;
+  hospitalName?: string | null;
+  drSpecialist?: string | null;
   isActive: boolean;
   accountSetupComplete: boolean;
   createdAt: string;

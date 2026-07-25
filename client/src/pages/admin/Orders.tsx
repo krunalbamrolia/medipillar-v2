@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, Mail, Phone, MapPin, User, Lock, MessageCircle } from "lucide-react";
+import { Eye, Mail, Phone, MapPin, User, Lock, MessageCircle, Store, Building2, Stethoscope } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import type { AdminOrder, OrderItemDetail, PaginatedResult } from "@/api/types";
 import { getAdminOrdersApi, getOrderByIdApi, updateOrderStatusApi } from "@/api/orders";
@@ -330,6 +330,18 @@ export default function AdminOrders() {
                     <div className="flex items-center gap-2">
                       <Mail className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                       <span className="text-foreground font-medium truncate">{selectedOrder.user?.email ?? "—"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Store className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                      <span className="text-foreground font-medium">Medical Name: {selectedOrder.user?.medicalName || "—"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                      <span className="text-foreground font-medium">Hospital Name: {selectedOrder.user?.hospitalName || "—"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 sm:col-span-2">
+                      <Stethoscope className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                      <span className="text-foreground font-medium">Dr Specialist: {selectedOrder.user?.drSpecialist || "—"}</span>
                     </div>
                   </div>
                   <div className="flex items-start gap-2 text-sm text-muted-foreground border-t pt-2 mt-1">

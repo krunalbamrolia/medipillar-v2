@@ -8,6 +8,9 @@ export interface User {
   phone: string;
   name: string;
   email?: string | null;
+  medicalName?: string | null;
+  hospitalName?: string | null;
+  drSpecialist?: string | null;
   accountSetupComplete?: boolean;
   createdAt: string;
 }

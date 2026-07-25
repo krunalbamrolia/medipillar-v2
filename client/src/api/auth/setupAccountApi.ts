@@ -5,6 +5,9 @@ import type { User } from "../types";
 export interface SetupAccountParams {
   email: string;
   password: string;
+  medicalName?: string;
+  hospitalName?: string;
+  drSpecialist?: string;
 }
 
 export async function setupAccountApi(params: SetupAccountParams): Promise<{ success: boolean; user: User }> {

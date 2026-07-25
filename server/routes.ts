@@ -22,6 +22,9 @@ const profileSyncSchema = z.object({
   name: z.string().min(1),
   phone: z.string().min(10),
   email: z.string().email().optional().or(z.literal("")),
+  medicalName: z.string().optional(),
+  hospitalName: z.string().optional(),
+  drSpecialist: z.string().optional(),
 });
 
 const verifyResetSessionSchema = z.object({
@@ -674,32 +677,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
-      const { email, password } = req.body;
+      const email = req.body.email;
+      const password = req.body.password;
+      const medicalName = req.body.medicalName ?? req.body.medical_name;
+      const hospitalName = req.body.hospitalName ?? req.body.hospital_name;
+      const drSpecialist = req.body.drSpecialist ?? req.body.dr_specialist;
+
       if (!email || !password) {
         return res.status(400).json({ error: "Email and password required" });
       }
       if (password.length < 8) {
         return res.status(400).json({ error: "Password must be at least 8 characters" });
       }
+
+      const mName = (medicalName || "").trim();
+      const hName = (hospitalName || "").trim();
+      const dSpec = (drSpecialist || "").trim();
+
+      if (!mName && !hName && !dSpec) {
+        return res.status(400).json({
+          error: "At least one of Medical Name, Hospital Name, or Dr Specialist is required",
+        });
+      }
+
       // Check email uniqueness
       const existingEmail = await storage.getUserByEmail(email.toLowerCase().trim());
       if (existingEmail && existingEmail.id !== userId) {
         return res.status(409).json({ error: "This email is already registered to another account" });
       }
       const passwordHash = await hashPassword(password);
-      await storage.updateUserEmail(userId, email.toLowerCase().trim());
-      await storage.setPassword(userId, passwordHash);
-      await storage.markAccountSetupComplete(userId);
+      const user = await storage.setupAccountProfile(userId, {
+        email: email.toLowerCase().trim(),
+        passwordHash,
+        medicalName: mName || null,
+        hospitalName: hName || null,
+        drSpecialist: dSpec || null,
+      });
 
       // Now establish the active login session
       req.session.userId = userId;
       req.session.pendingUserId = undefined;
 
-      const user = await storage.getUser(userId);
       res.json({ success: true, user });
     } catch (error) {
       console.error("Account setup error:", error);
       res.status(500).json({ error: "Failed to complete account setup" });
+    }
+  });
+
+  // Customer endpoint: update user's own medical details
+  app.patch("/api/auth/profile/medical", requireUser, async (req, res) => {
+    try {
+      const userId = req.session.userId as string;
+      const medicalName = req.body.medicalName ?? req.body.medical_name;
+      const hospitalName = req.body.hospitalName ?? req.body.hospital_name;
+      const drSpecialist = req.body.drSpecialist ?? req.body.dr_specialist;
+
+      const mName = (medicalName || "").trim();
+      const hName = (hospitalName || "").trim();
+      const dSpec = (drSpecialist || "").trim();
+
+      if (!mName && !hName && !dSpec) {
+        return res.status(400).json({
+          error: "At least one of Medical Name, Hospital Name, or Dr Specialist is required",
+        });
+      }
+
+      const updatedUser = await storage.updateUserMedicalFields(userId, {
+        medicalName: mName || null,
+        hospitalName: hName || null,
+        drSpecialist: dSpec || null,
+      });
+      res.json({ success: true, user: updatedUser });
+    } catch (error) {
+      console.error("Failed to update user medical profile:", error);
+      res.status(500).json({ error: "Failed to update medical profile" });
+    }
+  });
+
+  // Admin endpoint: update a user's medical details
+  app.patch("/api/admin/users/:id/medical-fields", requireAdmin, async (req, res) => {
+    try {
+      const medicalName = req.body.medicalName ?? req.body.medical_name;
+      const hospitalName = req.body.hospitalName ?? req.body.hospital_name;
+      const drSpecialist = req.body.drSpecialist ?? req.body.dr_specialist;
+
+      const updatedUser = await storage.updateUserMedicalFields(req.params.id, {
+        medicalName: medicalName !== undefined ? ((medicalName || "").trim() || null) : undefined,
+        hospitalName: hospitalName !== undefined ? ((hospitalName || "").trim() || null) : undefined,
+        drSpecialist: drSpecialist !== undefined ? ((drSpecialist || "").trim() || null) : undefined,
+      });
+      res.json({ success: true, user: updatedUser });
+    } catch (error) {
+      console.error("Failed to update user medical fields:", error);
+      res.status(500).json({ error: "Failed to update medical details" });
     }
   });
 

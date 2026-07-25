@@ -23,6 +23,9 @@ import {
   Loader2,
   KeyRound,
   ShieldCheck,
+  Building2,
+  Stethoscope,
+  Store,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -52,6 +55,9 @@ export function AuthModal() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [medicalName, setMedicalName] = useState("");
+  const [hospitalName, setHospitalName] = useState("");
+  const [drSpecialist, setDrSpecialist] = useState("");
   const [otp, setOtp] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -87,6 +93,9 @@ export function AuthModal() {
     setEmail("");
     setPassword("");
     setConfirmPassword("");
+    setMedicalName("");
+    setHospitalName("");
+    setDrSpecialist("");
     setOtp("");
     setError("");
     setLoading(false);
@@ -182,10 +191,20 @@ export function AuthModal() {
     if (!email.trim() || !password) return;
     if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
     if (password !== confirmPassword) { setError("Passwords don't match."); return; }
+    if (!medicalName.trim() && !hospitalName.trim() && !drSpecialist.trim()) {
+      setError("At least one of Medical Name, Hospital Name, or Dr Specialist is required.");
+      return;
+    }
     setError("");
     setLoading(true);
     try {
-      await setupAccount({ email: email.trim(), password });
+      await setupAccount({
+        email: email.trim(),
+        password,
+        medicalName: medicalName.trim() || undefined,
+        hospitalName: hospitalName.trim() || undefined,
+        drSpecialist: drSpecialist.trim() || undefined,
+      });
       setStep("success");
       setTimeout(closeModal, 1500);
     } catch (e: any) {
@@ -506,9 +525,9 @@ export function AuthModal() {
 
           {/* ── SETUP ── */}
           {step === "setup" && (
-            <>
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
               <p className="text-sm text-muted-foreground">
-                Almost there! Set up your email and password to complete registration.
+                Set up your credentials and medical details to complete registration.
               </p>
               <div className="space-y-1.5">
                 <Label htmlFor="setup-email">Email address *</Label>
@@ -557,7 +576,6 @@ export function AuthModal() {
                     value={confirmPassword}
                     onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}
                     className="pl-9 pr-10"
-                    onKeyDown={(e) => e.key === "Enter" && handleSetup()}
                   />
                   <button
                     type="button"
@@ -568,14 +586,78 @@ export function AuthModal() {
                   </button>
                 </div>
               </div>
+
+              {/* Professional / Medical Fields (at least 1 required) */}
+              <div className="pt-2 border-t space-y-2.5">
+                <div>
+                  <Label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Medical Details
+                  </Label>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                    * At least 1 of the 3 fields below is required
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="setup-medical-name" className="text-xs">Medical Name</Label>
+                  <div className="relative">
+                    <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="setup-medical-name"
+                      type="text"
+                      placeholder="Medical store / shop name"
+                      value={medicalName}
+                      onChange={(e) => { setMedicalName(e.target.value); setError(""); }}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="setup-hospital-name" className="text-xs">Hospital Name</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="setup-hospital-name"
+                      type="text"
+                      placeholder="Hospital / clinic name"
+                      value={hospitalName}
+                      onChange={(e) => { setHospitalName(e.target.value); setError(""); }}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="setup-dr-specialist" className="text-xs">Dr. Specialist</Label>
+                  <div className="relative">
+                    <Stethoscope className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="setup-dr-specialist"
+                      type="text"
+                      placeholder="Doctor name & specialization"
+                      value={drSpecialist}
+                      onChange={(e) => { setDrSpecialist(e.target.value); setError(""); }}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <Button
                 onClick={handleSetup}
-                disabled={!email.trim() || !password || !confirmPassword || loading}
-                className="w-full bg-[#0d3d2e] hover:bg-[#0a5240]"
+                disabled={
+                  !email.trim() ||
+                  !password ||
+                  !confirmPassword ||
+                  (!medicalName.trim() && !hospitalName.trim() && !drSpecialist.trim()) ||
+                  loading
+                }
+                className="w-full bg-[#0d3d2e] hover:bg-[#0a5240] mt-2"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
               </Button>
-            </>
+            </div>
           )}
 
           {/* ── PHONE-PASSWORD ── */}

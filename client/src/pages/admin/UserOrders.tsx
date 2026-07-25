@@ -23,7 +23,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { OrderItemsTable } from "@/components/admin/OrderItemsTable";
-import { ArrowLeft, Eye, Mail, MapPin, Package, Phone, X } from "lucide-react";
+import { ArrowLeft, Eye, Mail, MapPin, Package, Phone, X, Store, Building2, Stethoscope } from "lucide-react";
 import type { AdminUserOrderDetail, AdminUserOrdersPage, OrderItemDetail } from "@/api/types";
 import { getAdminUserOrdersApi } from "@/api/users";
 import { getOrderByIdApi } from "@/api/orders";
@@ -145,6 +145,24 @@ export default function AdminUserOrders() {
                   <span className="flex items-center gap-1.5">
                     <Mail className="h-3.5 w-3.5" />
                     {user.email}
+                  </span>
+                )}
+                {user.medicalName && (
+                  <span className="flex items-center gap-1.5">
+                    <Store className="h-3.5 w-3.5" />
+                    Medical: {user.medicalName}
+                  </span>
+                )}
+                {user.hospitalName && (
+                  <span className="flex items-center gap-1.5">
+                    <Building2 className="h-3.5 w-3.5" />
+                    Hospital: {user.hospitalName}
+                  </span>
+                )}
+                {user.drSpecialist && (
+                  <span className="flex items-center gap-1.5">
+                    <Stethoscope className="h-3.5 w-3.5" />
+                    Dr Specialist: {user.drSpecialist}
                   </span>
                 )}
               </div>

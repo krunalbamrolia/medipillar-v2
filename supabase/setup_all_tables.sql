@@ -16,12 +16,22 @@ create table if not exists public.profiles (
   name text not null,
   phone text not null unique,
   email text,
+  password_hash text,
+  account_setup_complete boolean not null default false,
+  medical_name text,
+  hospital_name text,
+  dr_specialist text,
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
 
 alter table if exists public.profiles
-  add column if not exists is_active boolean not null default true;
+  add column if not exists password_hash text,
+  add column if not exists account_setup_complete boolean not null default false,
+  add column if not exists is_active boolean not null default true,
+  add column if not exists medical_name text,
+  add column if not exists hospital_name text,
+  add column if not exists dr_specialist text;
 
 create table if not exists public.companies (
   id uuid primary key default gen_random_uuid(),

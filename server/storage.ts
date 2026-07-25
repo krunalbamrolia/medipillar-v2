@@ -47,6 +47,9 @@ function rowToProfile(row: Record<string, unknown>): Profile {
     name: row.name as string,
     phone: row.phone as string,
     email: (row.email as string) ?? null,
+    medicalName: (row.medical_name as string) ?? null,
+    hospitalName: (row.hospital_name as string) ?? null,
+    drSpecialist: (row.dr_specialist as string) ?? null,
     isActive: row.is_active !== false,
     accountSetupComplete: row.account_setup_complete === true,
     createdAt: row.created_at as string,
@@ -209,18 +212,23 @@ class SupabaseStorage {
     name: string;
     phone: string;
     email?: string | null;
+    medicalName?: string | null;
+    hospitalName?: string | null;
+    drSpecialist?: string | null;
   }): Promise<Profile> {
+    const patch: Record<string, any> = {
+      id: profile.id,
+      name: profile.name,
+      phone: profile.phone,
+      email: profile.email ?? null,
+    };
+    if (profile.medicalName !== undefined) patch.medical_name = profile.medicalName || null;
+    if (profile.hospitalName !== undefined) patch.hospital_name = profile.hospitalName || null;
+    if (profile.drSpecialist !== undefined) patch.dr_specialist = profile.drSpecialist || null;
+
     const { data, error } = await this.db()
       .from("profiles")
-      .upsert(
-        {
-          id: profile.id,
-          name: profile.name,
-          phone: profile.phone,
-          email: profile.email ?? null,
-        },
-        { onConflict: "id" },
-      )
+      .upsert(patch, { onConflict: "id" })
       .select()
       .single();
     this.handleError(error);
@@ -230,7 +238,7 @@ class SupabaseStorage {
   async getUser(id: string): Promise<Profile | undefined> {
     const { data, error } = await this.db()
       .from("profiles")
-      .select("id, name, phone, email, is_active, account_setup_complete, created_at")
+      .select("id, name, phone, email, medical_name, hospital_name, dr_specialist, is_active, account_setup_complete, created_at")
       .eq("id", id)
       .maybeSingle();
     this.handleError(error);
@@ -240,7 +248,7 @@ class SupabaseStorage {
   async getUserByPhone(phone: string): Promise<Profile | undefined> {
     const { data, error } = await this.db()
       .from("profiles")
-      .select("id, name, phone, email, is_active, account_setup_complete, created_at")
+      .select("id, name, phone, email, medical_name, hospital_name, dr_specialist, is_active, account_setup_complete, created_at")
       .eq("phone", phone)
       .maybeSingle();
     this.handleError(error);
@@ -250,7 +258,7 @@ class SupabaseStorage {
   async getUserByEmail(email: string): Promise<Profile | undefined> {
     const { data, error } = await this.db()
       .from("profiles")
-      .select("id, name, phone, email, is_active, account_setup_complete, created_at")
+      .select("id, name, phone, email, medical_name, hospital_name, dr_specialist, is_active, account_setup_complete, created_at")
       .eq("email", email)
       .maybeSingle();
     this.handleError(error);
@@ -259,15 +267,15 @@ class SupabaseStorage {
 
   async getUserByPhoneWithHash(phone: string): Promise<
     | (Profile & {
-        passwordHash: string | null;
-        accountSetupComplete: boolean;
-      })
+      passwordHash: string | null;
+      accountSetupComplete: boolean;
+    })
     | undefined
   > {
     const { data, error } = await this.db()
       .from("profiles")
       .select(
-        "id, name, phone, email, is_active, created_at, password_hash, account_setup_complete",
+        "id, name, phone, email, medical_name, hospital_name, dr_specialist, is_active, created_at, password_hash, account_setup_complete",
       )
       .eq("phone", phone)
       .maybeSingle();
@@ -282,15 +290,15 @@ class SupabaseStorage {
 
   async getUserByEmailWithHash(email: string): Promise<
     | (Profile & {
-        passwordHash: string | null;
-        accountSetupComplete: boolean;
-      })
+      passwordHash: string | null;
+      accountSetupComplete: boolean;
+    })
     | undefined
   > {
     const { data, error } = await this.db()
       .from("profiles")
       .select(
-        "id, name, phone, email, is_active, created_at, password_hash, account_setup_complete",
+        "id, name, phone, email, medical_name, hospital_name, dr_specialist, is_active, created_at, password_hash, account_setup_complete",
       )
       .eq("email", email)
       .maybeSingle();
@@ -327,6 +335,70 @@ class SupabaseStorage {
     this.handleError(error);
   }
 
+  async setupAccountProfile(
+    userId: string,
+    data: {
+      email: string;
+      passwordHash: string;
+      medicalName?: string | null;
+      hospitalName?: string | null;
+      drSpecialist?: string | null;
+    },
+  ): Promise<Profile> {
+    console.log("[STORAGE] Performing setupAccountProfile for userId=", userId, data);
+    const patch: Record<string, any> = {
+      email: data.email,
+      password_hash: data.passwordHash,
+      account_setup_complete: true,
+      medical_name: data.medicalName || null,
+      hospital_name: data.hospitalName || null,
+      dr_specialist: data.drSpecialist || null,
+    };
+
+    console.log(`[STORAGE] Performing setupAccountProfile for userId=${userId}`, patch);
+
+    const { data: updated, error } = await this.db()
+      .from("profiles")
+      .update(patch)
+      .eq("id", userId)
+      .select()
+      .single();
+
+    this.handleError(error);
+    if (!updated) {
+      throw new Error(`Profile not found for userId: ${userId}`);
+    }
+
+    console.log(`[STORAGE] setupAccountProfile success for userId=${userId}`, updated);
+    return rowToProfile(updated);
+  }
+
+  async updateUserMedicalFields(
+    userId: string,
+    fields: {
+      medicalName?: string | null;
+      hospitalName?: string | null;
+      drSpecialist?: string | null;
+    },
+  ): Promise<Profile> {
+    const patch: Record<string, string | null> = {};
+    if (fields.medicalName !== undefined) patch.medical_name = fields.medicalName || null;
+    if (fields.hospitalName !== undefined) patch.hospital_name = fields.hospitalName || null;
+    if (fields.drSpecialist !== undefined) patch.dr_specialist = fields.drSpecialist || null;
+
+    console.log(`[STORAGE] Updating medical fields for userId=${userId}`, patch);
+
+    const { data: updated, error } = await this.db()
+      .from("profiles")
+      .update(patch)
+      .eq("id", userId)
+      .select()
+      .single();
+
+    this.handleError(error);
+    return rowToProfile(updated);
+  }
+
   async getUsersPaginated(
     params: { search?: string; page?: number; limit?: number } = {},
   ): Promise<PaginatedResult<Profile & { orderCount: number }>> {
@@ -335,7 +407,7 @@ class SupabaseStorage {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    let q = this.db().from("profiles").select("id, name, phone, email, is_active, account_setup_complete, created_at", { count: "exact" });
+    let q = this.db().from("profiles").select("id, name, phone, email, medical_name, hospital_name, dr_specialist, is_active, account_setup_complete, created_at", { count: "exact" });
     if (params.search) {
       q = q.or(
         `name.ilike.%${params.search}%,phone.ilike.%${params.search}%,email.ilike.%${params.search}%`,
@@ -1326,7 +1398,7 @@ class SupabaseStorage {
     // Fetch user profile so caller can build WhatsApp notification link
     const { data: profileRow, error: profileError } = await this.db()
       .from("profiles")
-      .select("id, name, phone, email, is_active, account_setup_complete, created_at")
+      .select("id, name, phone, email, medical_name, hospital_name, dr_specialist, is_active, account_setup_complete, created_at")
       .eq("id", order.userId)
       .maybeSingle();
     this.handleError(profileError);
@@ -1365,7 +1437,7 @@ class SupabaseStorage {
       .from("orders")
       .select("status");
     this.handleError(statusError);
-    
+
     const statusCounts: Record<string, number> = {};
     for (const row of statusRows ?? []) {
       const status = row.status as string;
