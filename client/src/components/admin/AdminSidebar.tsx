@@ -1,6 +1,6 @@
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
-import { Pill, LayoutDashboard, FolderTree, Building2, PillIcon, MessageSquare, LogOut, ShoppingCart, Users } from "lucide-react";
+import { Pill, LayoutDashboard, FolderTree, Building2, PillIcon, MessageSquare, LogOut, ShoppingCart, Users, Megaphone } from "lucide-react";
 
 export function AdminSidebar() {
   const [location] = useLocation();
@@ -10,6 +10,11 @@ export function AdminSidebar() {
       title: "Dashboard",
       url: "/admin/dashboard",
       icon: LayoutDashboard,
+    },
+    {
+      title: "Campaigns",
+      url: "/admin/campaigns",
+      icon: Megaphone,
     },
     {
       title: "Categories",
@@ -44,7 +49,9 @@ export function AdminSidebar() {
   ];
 
   const isActive = (url: string) =>
-    location === url || (url === "/admin/users" && location.startsWith("/admin/users"));
+    location === url || 
+    (url === "/admin/users" && location.startsWith("/admin/users")) ||
+    (url === "/admin/campaigns" && location.startsWith("/admin/campaigns"));
 
   return (
     <Sidebar>

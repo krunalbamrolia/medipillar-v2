@@ -8,6 +8,9 @@ import { CompanyTable } from "@/components/CompanyTable";
 import { CompanyLogoTicker } from "@/components/CompanyLogoTicker";
 import { getCompanyLogoUrl } from "@/lib/companyLogo";
 import { Star, ArrowRight, Building2, Headphones, BookOpen, Award, Sparkles } from "lucide-react";
+import { useActiveCampaigns } from "@/hooks/useCampaigns";
+import { CampaignSlider } from "@/components/CampaignSlider";
+import { CampaignTimer } from "@/components/CampaignTimer";
 const heroImage =
   "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80";
 import type { Company } from "@shared/types/catalog";
@@ -25,6 +28,8 @@ export default function Home() {
   }>({
     queryKey: ["/api/stats"],
   });
+
+  const { data: activeCampaigns = [], isLoading: isLoadingCampaigns } = useActiveCampaigns();
 
   const activeCompanies = companies.filter((c) => c.status === "active");
   const featuredCompanies = activeCompanies.slice(0, 10);
@@ -97,6 +102,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <CampaignTimer campaigns={activeCampaigns} />
       <Navigation />
 
       <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-[#0d3d2e] via-[#0a5240] to-[#084434] pt-20">
@@ -191,6 +197,12 @@ export default function Home() {
 
       {activeCompanies.length > 0 && (
         <CompanyLogoTicker companies={activeCompanies} />
+      )}
+
+      {(isLoadingCampaigns || activeCampaigns.length > 0) && (
+        <div className="py-8 bg-gray-50/50">
+          <CampaignSlider campaigns={activeCampaigns} isLoading={isLoadingCampaigns} />
+        </div>
       )}
 
       <section className="py-24 bg-white">

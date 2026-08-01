@@ -26,6 +26,8 @@ const AdminOrders = lazy(() => import("@/pages/admin/Orders"));
 const AdminUsers = lazy(() => import("@/pages/admin/Users"));
 const AdminUserOrders = lazy(() => import("@/pages/admin/UserOrders"));
 const AdminQueries = lazy(() => import("@/pages/admin/Queries"));
+const Campaigns = lazy(() => import("@/pages/admin/Campaigns"));
+const CampaignForm = lazy(() => import("@/pages/admin/CampaignForm"));
 
 function ScrollToTop() {
   const [location] = useLocation();
@@ -66,6 +68,27 @@ function AppRouter() {
             {() => (
               <AdminLayout>
                 <AdminDashboard />
+              </AdminLayout>
+            )}
+          </Route>
+          <Route path="/admin/campaigns">
+            {() => (
+              <AdminLayout>
+                <Campaigns />
+              </AdminLayout>
+            )}
+          </Route>
+          <Route path="/admin/campaigns/new">
+            {() => (
+              <AdminLayout>
+                <CampaignForm />
+              </AdminLayout>
+            )}
+          </Route>
+          <Route path="/admin/campaigns/:id/edit">
+            {() => (
+              <AdminLayout>
+                <CampaignForm />
               </AdminLayout>
             )}
           </Route>

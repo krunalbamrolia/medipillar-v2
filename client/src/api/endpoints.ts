@@ -26,6 +26,12 @@ export const ENDPOINTS = {
     orders: "/api/admin/orders",
     orderStatus: (id: string) => `/api/admin/orders/${id}/status`,
     orderItemTracked: (id: string) => `/api/admin/order-items/${id}/tracked`,
+    campaigns: "/api/admin/campaigns",
+    campaignDetail: (id: string) => `/api/admin/campaigns/${id}`,
+    campaignDuplicate: (id: string) => `/api/admin/campaigns/${id}/duplicate`,
+  },
+  campaigns: {
+    active: "/api/campaigns/active",
   },
   messages: {
     base: "/api/messages",

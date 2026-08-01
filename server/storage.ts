@@ -12,6 +12,8 @@ import type {
   OrderItemDetail,
   Query,
   PaginatedResult,
+  Campaign,
+  CampaignMedia,
 } from "../shared/types/database.js";
 
 export type {
@@ -23,6 +25,8 @@ export type {
   Order,
   OrderItem,
   Query,
+  Campaign,
+  CampaignMedia,
 };
 
 /** Legacy API shape used by existing React pages */
@@ -147,6 +151,34 @@ function queryToLegacyMessage(q: Query): LegacyMessage {
     email: q.email ?? q.phone,
     message: q.message,
     createdAt: q.createdAt,
+  };
+}
+
+function rowToCampaign(row: Record<string, unknown>): Campaign {
+  const now = new Date();
+  const startDate = new Date(row.start_date as string);
+  const endDate = new Date(row.end_date as string);
+  
+  let computedStatus: "scheduled" | "active" | "expired" = "scheduled";
+  if (now > endDate) {
+    computedStatus = "expired";
+  } else if (now >= startDate && now <= endDate) {
+    computedStatus = "active";
+  }
+
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    description: (row.description as string) ?? null,
+    redirectType: row.redirect_type as "default_products" | "custom_link",
+    redirectUrl: (row.redirect_url as string) ?? null,
+    startDate: row.start_date as string,
+    endDate: row.end_date as string,
+    status: computedStatus,
+    displayOrder: row.display_order as number,
+    media: (row.media as CampaignMedia[]) ?? [],
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
   };
 }
 
@@ -1519,6 +1551,159 @@ class SupabaseStorage {
   }
   async createAdmin(_admin: unknown) {
     throw new Error("Use ADMIN_EMAIL / ADMIN_PASSWORD env vars");
+  }
+
+  // ——— Campaigns ———
+  async getCampaignsPaginated(params: {
+    search?: string;
+    status?: string;
+    sortBy?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResult<Campaign>> {
+    const page = params.page ?? 1;
+    const limit = params.limit ?? 10;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let q = this.db().from("campaigns").select("*", { count: "exact" });
+
+    if (params.search) {
+      q = q.ilike("title", `%${params.search}%`);
+    }
+
+    if (params.status) {
+      const now = new Date().toISOString();
+      if (params.status === "scheduled") {
+        q = q.gt("start_date", now);
+      } else if (params.status === "active") {
+        q = q.lte("start_date", now).gte("end_date", now);
+      } else if (params.status === "expired") {
+        q = q.lt("end_date", now);
+      }
+    }
+
+    if (params.sortBy) {
+      switch (params.sortBy) {
+        case "newest":
+          q = q.order("created_at", { ascending: false });
+          break;
+        case "oldest":
+          q = q.order("created_at", { ascending: true });
+          break;
+        case "start_date":
+          q = q.order("start_date", { ascending: true });
+          break;
+        case "display_order":
+          q = q.order("display_order", { ascending: true });
+          break;
+        default:
+          q = q.order("created_at", { ascending: false });
+      }
+    } else {
+      q = q.order("created_at", { ascending: false });
+    }
+
+    const { data, error, count } = await q.range(from, to);
+    this.handleError(error);
+    const total = count ?? 0;
+
+    return {
+      data: (data ?? []).map(rowToCampaign),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
+  }
+
+  async getActiveCampaigns(): Promise<Campaign[]> {
+    const now = new Date().toISOString();
+    const { data, error } = await this.db()
+      .from("campaigns")
+      .select("*")
+      .lte("start_date", now)
+      .gte("end_date", now)
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: false });
+      
+    this.handleError(error);
+    return (data ?? []).map(rowToCampaign);
+  }
+
+  async getCampaign(id: string): Promise<Campaign | undefined> {
+    const { data, error } = await this.db()
+      .from("campaigns")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    this.handleError(error);
+    return data ? rowToCampaign(data) : undefined;
+  }
+
+  async createCampaign(campaign: Omit<Campaign, "id" | "createdAt" | "updatedAt" | "status">): Promise<Campaign> {
+    const { data, error } = await this.db()
+      .from("campaigns")
+      .insert({
+        title: campaign.title,
+        description: campaign.description,
+        redirect_type: campaign.redirectType,
+        redirect_url: campaign.redirectUrl,
+        start_date: campaign.startDate,
+        end_date: campaign.endDate,
+        display_order: campaign.displayOrder,
+        media: campaign.media,
+      })
+      .select()
+      .single();
+    this.handleError(error);
+    return rowToCampaign(data);
+  }
+
+  async updateCampaign(id: string, campaign: Partial<Omit<Campaign, "id" | "createdAt" | "updatedAt" | "status">>): Promise<Campaign | undefined> {
+    const patch: Record<string, any> = {};
+    if (campaign.title !== undefined) patch.title = campaign.title;
+    if (campaign.description !== undefined) patch.description = campaign.description;
+    if (campaign.redirectType !== undefined) patch.redirectType = campaign.redirectType;
+    if (campaign.redirectUrl !== undefined) patch.redirect_url = campaign.redirectUrl;
+    if (campaign.startDate !== undefined) patch.start_date = campaign.startDate;
+    if (campaign.endDate !== undefined) patch.end_date = campaign.endDate;
+    if (campaign.displayOrder !== undefined) patch.display_order = campaign.displayOrder;
+    if (campaign.media !== undefined) patch.media = campaign.media;
+
+    const { data, error } = await this.db()
+      .from("campaigns")
+      .update(patch)
+      .eq("id", id)
+      .select()
+      .maybeSingle();
+    this.handleError(error);
+    return data ? rowToCampaign(data) : undefined;
+  }
+
+  async deleteCampaign(id: string): Promise<boolean> {
+    const { error, count } = await this.db()
+      .from("campaigns")
+      .delete({ count: "exact" })
+      .eq("id", id);
+    this.handleError(error);
+    return (count ?? 0) > 0;
+  }
+
+  async duplicateCampaign(id: string): Promise<Campaign | undefined> {
+    const original = await this.getCampaign(id);
+    if (!original) return undefined;
+    
+    return this.createCampaign({
+      title: `${original.title} (Copy)`,
+      description: original.description,
+      redirectType: original.redirectType,
+      redirectUrl: original.redirectUrl,
+      startDate: original.startDate,
+      endDate: original.endDate,
+      displayOrder: original.displayOrder,
+      media: original.media,
+    });
   }
 }
 

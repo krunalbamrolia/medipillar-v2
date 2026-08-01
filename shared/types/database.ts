@@ -13,6 +13,26 @@ export interface Profile {
   createdAt: string;
 }
 
+export interface CampaignMedia {
+  type: "image" | "video" | "youtube";
+  url: string;
+}
+
+export interface Campaign {
+  id: string;
+  title: string;
+  description: string | null;
+  redirectType: "default_products" | "custom_link";
+  redirectUrl: string | null;
+  startDate: string;
+  endDate: string;
+  status: "scheduled" | "active" | "expired";
+  displayOrder: number;
+  media: CampaignMedia[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface OrderItemDetail {
   id: string;
   medicineName: string;

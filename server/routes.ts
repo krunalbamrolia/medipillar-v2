@@ -964,6 +964,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ——— Campaign Routes ———
+  app.get("/api/campaigns/active", async (req, res) => {
+    try {
+      const campaigns = await storage.getActiveCampaigns();
+      res.json(campaigns);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch active campaigns" });
+    }
+  });
+
+  app.get("/api/admin/campaigns", requireAdmin, async (req, res) => {
+    try {
+      const { search, status, sortBy, page, limit } = req.query;
+      const result = await storage.getCampaignsPaginated({
+        search: search as string,
+        status: status as string,
+        sortBy: sortBy as string,
+        page: page ? parseInt(page as string) : 1,
+        limit: limit ? parseInt(limit as string) : 10,
+      });
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch campaigns" });
+    }
+  });
+
+  app.get("/api/admin/campaigns/:id", requireAdmin, async (req, res) => {
+    try {
+      const campaign = await storage.getCampaign(req.params.id);
+      if (!campaign) return res.status(404).json({ error: "Campaign not found" });
+      res.json(campaign);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch campaign" });
+    }
+  });
+
+  app.post("/api/admin/campaigns", requireAdmin, async (req, res) => {
+    try {
+      // Check for overlapping campaigns
+      const { startDate, endDate } = req.body;
+      const allCampaigns = await storage.getCampaignsPaginated({ limit: 1000, page: 1 });
+      const hasOverlap = allCampaigns.data.some(c => {
+        return (new Date(startDate) <= new Date(c.endDate) && new Date(endDate) >= new Date(c.startDate));
+      });
+
+      if (hasOverlap) {
+        return res.status(400).json({ error: "Only one campaign can be active at a time. The dates overlap with an existing campaign." });
+      }
+
+      const campaign = await storage.createCampaign(req.body);
+      res.status(201).json(campaign);
+    } catch (error: any) {
+      console.error("CREATE CAMPAIGN ERROR:", error);
+      const msg = error?.message?.includes('overlap') ? "Only one campaign can be active at a time." : "Failed to create campaign";
+      res.status(400).json({ error: msg });
+    }
+  });
+
+  app.patch("/api/admin/campaigns/:id", requireAdmin, async (req, res) => {
+    try {
+      const existingCampaign = await storage.getCampaign(req.params.id);
+      if (!existingCampaign) return res.status(404).json({ error: "Campaign not found" });
+
+      const startDate = req.body.startDate || existingCampaign.startDate;
+      const endDate = req.body.endDate || existingCampaign.endDate;
+
+      // Check for overlapping campaigns
+      const allCampaigns = await storage.getCampaignsPaginated({ limit: 1000, page: 1 });
+      const hasOverlap = allCampaigns.data.some(c => {
+        if (c.id === req.params.id) return false;
+        return (new Date(startDate) <= new Date(c.endDate) && new Date(endDate) >= new Date(c.startDate));
+      });
+
+      if (hasOverlap) {
+        return res.status(400).json({ error: "Only one campaign can be active at a time. The dates overlap with an existing campaign." });
+      }
+
+      const campaign = await storage.updateCampaign(req.params.id, req.body);
+      res.json(campaign);
+    } catch (error: any) {
+      console.error("UPDATE CAMPAIGN ERROR:", error);
+      const msg = error?.message?.includes('overlap') ? "Only one campaign can be active at a time." : "Failed to update campaign";
+      res.status(400).json({ error: msg });
+    }
+  });
+
+  app.delete("/api/admin/campaigns/:id", requireAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteCampaign(req.params.id);
+      if (!success) return res.status(404).json({ error: "Campaign not found" });
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete campaign" });
+    }
+  });
+
+  app.post("/api/admin/campaigns/:id/duplicate", requireAdmin, async (req, res) => {
+    try {
+      const campaign = await storage.duplicateCampaign(req.params.id);
+      if (!campaign) return res.status(404).json({ error: "Campaign not found" });
+      res.status(201).json(campaign);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to duplicate campaign" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
